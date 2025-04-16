@@ -17,7 +17,7 @@ const CATEGORIES = [
   'Athletics',
   'Community Service',
   'Culture',
-  'EAGLE',
+  'FALCON',
   'Technology',
   'Other'
 ];
