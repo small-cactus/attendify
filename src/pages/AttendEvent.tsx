@@ -9,6 +9,18 @@ interface Event {
   invite_code: string;
   club_id: string;
   club_name?: string;
+  checkin_location_enabled?: boolean;
+  checkin_qr_enabled?: boolean;
+  checkin_code_enabled?: boolean;
+  checkin_code?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_radius_meters?: number | null;
+  recurrence?: string;
+  recurrence_until?: string | null;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
+  checkin_only_during_event?: boolean;
 }
 
 interface ClubMember {
@@ -62,11 +74,23 @@ const AttendEvent: React.FC = () => {
         const { data: eventsData, error: eventsError } = await supabase
           .from('events')
           .select(`
-            id, 
-            name, 
-            event_date, 
-            invite_code, 
-            club_id
+            id,
+            name,
+            event_date,
+            invite_code,
+            club_id,
+            checkin_location_enabled,
+            checkin_qr_enabled,
+            checkin_code_enabled,
+            checkin_code,
+            location_lat,
+            location_lng,
+            location_radius_meters,
+            recurrence,
+            recurrence_until,
+            event_start_time,
+            event_end_time,
+            checkin_only_during_event
           `)
           .gte('event_date', today.toISOString())
           .lte('event_date', nextWeek.toISOString())
@@ -100,7 +124,19 @@ const AttendEvent: React.FC = () => {
             event_date: event.event_date,
             invite_code: event.invite_code,
             club_id: event.club_id,
-            club_name: clubData?.name || 'Unknown Club'
+            club_name: clubData?.name || 'Unknown Club',
+            checkin_location_enabled: event.checkin_location_enabled,
+            checkin_qr_enabled: event.checkin_qr_enabled,
+            checkin_code_enabled: event.checkin_code_enabled,
+            checkin_code: event.checkin_code,
+            location_lat: event.location_lat,
+            location_lng: event.location_lng,
+            location_radius_meters: event.location_radius_meters,
+            recurrence: event.recurrence,
+            recurrence_until: event.recurrence_until,
+            event_start_time: event.event_start_time,
+            event_end_time: event.event_end_time,
+            checkin_only_during_event: event.checkin_only_during_event
           });
         }
         
@@ -124,11 +160,23 @@ const AttendEvent: React.FC = () => {
       const { data: eventData, error: eventError } = await supabase
         .from('events')
         .select(`
-          id, 
-          name, 
-          event_date, 
-          invite_code, 
-          club_id
+          id,
+          name,
+          event_date,
+          invite_code,
+          club_id,
+          checkin_location_enabled,
+          checkin_qr_enabled,
+          checkin_code_enabled,
+          checkin_code,
+          location_lat,
+          location_lng,
+          location_radius_meters,
+          recurrence,
+          recurrence_until,
+          event_start_time,
+          event_end_time,
+          checkin_only_during_event
         `)
         .eq('invite_code', inviteCode)
         .single();
@@ -156,7 +204,19 @@ const AttendEvent: React.FC = () => {
         event_date: eventData.event_date,
         invite_code: eventData.invite_code,
         club_id: eventData.club_id,
-        club_name: clubData?.name || 'Unknown Club'
+        club_name: clubData?.name || 'Unknown Club',
+        checkin_location_enabled: eventData.checkin_location_enabled,
+        checkin_qr_enabled: eventData.checkin_qr_enabled,
+        checkin_code_enabled: eventData.checkin_code_enabled,
+        checkin_code: eventData.checkin_code,
+        location_lat: eventData.location_lat,
+        location_lng: eventData.location_lng,
+        location_radius_meters: eventData.location_radius_meters,
+        recurrence: eventData.recurrence,
+        recurrence_until: eventData.recurrence_until,
+        event_start_time: eventData.event_start_time,
+        event_end_time: eventData.event_end_time,
+        checkin_only_during_event: eventData.checkin_only_during_event
       };
       
       setEventDetails(event);
@@ -234,6 +294,72 @@ const AttendEvent: React.FC = () => {
     }
     
     try {
+      // ENFORCE CHECK-IN RESTRICTIONS
+      // 1. Check-in method: QR/direct or code
+      if (eventDetails.checkin_qr_enabled === false && eventDetails.checkin_code_enabled === false) {
+        setError('Check-in is not enabled for this event.');
+        setLoading(false);
+        return;
+      }
+      // If code is required, prompt for code and check
+      if (eventDetails.checkin_code_enabled) {
+        if (!inviteCode || (eventDetails.checkin_code && inviteCode !== eventDetails.checkin_code)) {
+          setError('Invalid check-in code for this event.');
+          setLoading(false);
+          return;
+        }
+      }
+      // 2. Location restriction
+      if (eventDetails.checkin_location_enabled) {
+        if (!navigator.geolocation) {
+          setError('Location check-in is required, but your device does not support geolocation.');
+          setLoading(false);
+          return;
+        }
+        const getPosition = () => new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+        });
+        let position;
+        try {
+          position = await getPosition();
+        } catch (geoErr) {
+          setError('Location permission denied or unavailable.');
+          setLoading(false);
+          return;
+        }
+        const { latitude, longitude } = position.coords;
+        const toRad = (x: number) => x * Math.PI / 180;
+        const dist = (() => {
+          if (eventDetails.location_lat == null || eventDetails.location_lng == null || !eventDetails.location_radius_meters) return Infinity;
+          const R = 6371000; // meters
+          const dLat = toRad(latitude - eventDetails.location_lat);
+          const dLon = toRad(longitude - eventDetails.location_lng);
+          const lat1 = toRad(eventDetails.location_lat);
+          const lat2 = toRad(latitude);
+          const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          return R * c;
+        })();
+        if (dist > (eventDetails.location_radius_meters || 0)) {
+          setError('You are not at the event location.');
+          setLoading(false);
+          return;
+        }
+      }
+      // 3. Time window restriction
+      if (eventDetails.checkin_only_during_event) {
+        if (eventDetails.event_start_time && eventDetails.event_end_time) {
+          const now = new Date();
+          const start = new Date(eventDetails.event_start_time);
+          const end = new Date(eventDetails.event_end_time);
+          if (now < start || now > end) {
+            setError('Check-in is only allowed during the event time window.');
+            setLoading(false);
+            return;
+          }
+        }
+      }
+      
       // First check if member exists for this club
       let memberId;
       
@@ -610,10 +736,10 @@ const AttendEvent: React.FC = () => {
                   Check in to another event
                 </button>
                 <a 
-                  href="/" 
+                  href="/dashboard" 
                   className="py-3 px-4 bg-gray-100 text-black font-medium rounded-md hover:bg-gray-200 transition-all border border-gray-200"
                 >
-                  Back to home
+                  Go to Dashboard
                 </a>
               </div>
             </motion.div>
@@ -626,8 +752,8 @@ const AttendEvent: React.FC = () => {
           transition={{ duration: 0.25, delay: 0.2 }}
           className="mt-4 text-center"
         >
-          <a href="/" className="text-sm text-gray-600 border-b border-transparent hover:border-gray-600 transition-all">
-            Back to home
+          <a href="/dashboard" className="text-sm text-gray-600 border-b border-transparent hover:border-gray-600 transition-all">
+            Go to Dashboard
           </a>
         </motion.div>
       </div>

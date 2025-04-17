@@ -31,4 +31,18 @@ EXCEPTION
     -- Constraint might fail if there are duplicate names - handle gracefully
     WHEN unique_violation THEN
         RAISE NOTICE 'Could not add unique constraint - duplicate names exist in members table';
-END $$; 
+END $$;
+
+-- Add columns to events table for advanced check-in and recurrence
+ALTER TABLE events ADD COLUMN IF NOT EXISTS checkin_location_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS checkin_qr_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS checkin_code_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS checkin_code TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS location_lat DOUBLE PRECISION;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS location_lng DOUBLE PRECISION;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS location_radius_meters INTEGER;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence TEXT DEFAULT 'none'; -- none, daily, weekly, monthly
+ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_until DATE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_start_time TIMESTAMP;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_end_time TIMESTAMP;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS checkin_only_during_event BOOLEAN DEFAULT TRUE; 

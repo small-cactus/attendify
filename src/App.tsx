@@ -11,6 +11,7 @@ import AttendEvent from './pages/AttendEvent';
 import EventCheckinPage from './pages/EventCheckinPage';
 import EventCheckinQR from './pages/EventCheckinQR';
 import Welcome from './pages/Welcome';
+import Dashboard from './pages/Dashboard';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -34,6 +35,7 @@ function App() {
           <Route path="/join/:clubId" element={<ClubJoinPage />} />
           <Route path="/join-flow" element={<JoinFlow />} />
           <Route path="/attend" element={<AttendEvent />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/checkin/:inviteCode" element={<EventCheckinPage />} />
           <Route path="/events/:inviteCode/checkin-qr" element={<EventCheckinQR />} />
           
