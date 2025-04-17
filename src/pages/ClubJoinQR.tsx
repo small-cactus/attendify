@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
+import Logo from '../components/Logo';
 
 interface ClubInfo {
   name: string;
@@ -47,14 +48,14 @@ const ClubJoinQR: React.FC = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-gray-50 p-6 relative">
       {/* Attendify Branding (Top Left) */}
       <div className="absolute top-6 left-6">
-        <span className="text-2xl font-semibold bg-gradient-to-r from-black to-gray-700 bg-clip-text text-transparent">
-          Attendify
-        </span>
+        <Logo showText={true} />
       </div>
       
       {/* Attendify Branding (Bottom Left) */}
       <div className="absolute bottom-6 left-6 text-sm text-gray-400">
-        Powered by Attendify
+        <span className="inline-flex items-center gap-1">
+          Powered by Attendify
+        </span>
       </div>
       
       {loading ? (
@@ -83,7 +84,7 @@ const ClubJoinQR: React.FC = () => {
           </p>
           <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 inline-block mb-8">
             <QRCodeCanvas 
-              value={clubInfo.access_code}
+              value={`${window.location.origin}/join/${clubId}`}
               size={256} 
               level="H" 
               bgColor="#ffffff"

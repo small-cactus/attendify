@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import Logo from '../components/Logo';
 
 const Welcome: React.FC = () => {
   const navigate = useNavigate();
@@ -13,8 +14,11 @@ const Welcome: React.FC = () => {
         transition={{ duration: 0.35 }}
         className="text-center mb-12"
       >
-        <h1 className="text-4xl md:text-5xl font-bold text-black mb-3">
-          Attendify
+        <h1 className="mb-3 flex justify-center">
+          <Logo 
+            imageClassName="w-12 h-12 md:w-14 md:h-14"
+            textClassName="text-4xl md:text-5xl"
+          />
         </h1>
         <p className="text-md text-gray-600 max-w-md mx-auto">
           Simple attendance management

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Logo from '../components/Logo';
 
 const About: React.FC = () => {
   const features = [
@@ -24,7 +25,7 @@ const About: React.FC = () => {
   return (
     <div className="page-container">
       <section className="text-center space-y-4">
-        <h1>About Attendify</h1>
+        <h1><Logo /></h1>
         <p className="max-w-3xl mx-auto text-xl">
           Attendify is a modern attendance tracking platform designed specifically for school clubs
           and organizations. We make it easy to manage attendance, so you can focus on what matters most

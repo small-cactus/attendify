@@ -1,4 +1,4 @@
-# Attendify
+# <img src="public/attendify-favicon.png" alt="Attendify logo" width="32" style="vertical-align:middle; margin-right:8px;"/> Attendify
 
 Attendify is a modern attendance tracking platform designed for school clubs and organizations. Effortlessly manage attendance, clubs, and members with a clean, intuitive interface.
 
