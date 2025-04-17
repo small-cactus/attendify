@@ -411,7 +411,7 @@ const ClubDetail: React.FC = () => {
                             </div>
                           </div>
                           <div className="p-1 bg-white border border-gray-300 rounded ml-auto">
-                            <QRCodeCanvas value={event.invite_code} size={50} level="L" />
+                            <QRCodeCanvas value={`${window.location.origin}/checkin/${event.invite_code}`} size={50} level="L" />
                           </div>
                         </li>
                       ))}

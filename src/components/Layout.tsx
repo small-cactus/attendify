@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import Logo from './Logo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -37,8 +38,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         className="w-full bg-white fixed top-0 z-50 border-b border-gray-200"
       >
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Link to="/" className="text-lg font-bold text-black">
-            Attendify
+          <Link to="/" className="mr-6 flex-shrink-0">
+            <Logo 
+              textClassName="text-3xl" 
+              imageClassName="w-8 h-8" /* Slightly larger image */ 
+            />
           </Link>
           
           <div className="flex items-center space-x-4">
