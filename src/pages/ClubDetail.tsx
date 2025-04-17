@@ -410,8 +410,15 @@ const ClubDetail: React.FC = () => {
                               Invite Code: {event.invite_code}
                             </div>
                           </div>
-                          <div className="p-1 bg-white border border-gray-300 rounded ml-auto">
+                          <div className="flex flex-col items-center gap-2 ml-auto flex-shrink-0">
                             <QRCodeCanvas value={`${window.location.origin}/checkin/${event.invite_code}`} size={50} level="L" />
+                            <Link 
+                              to={`/events/${event.invite_code}/checkin-qr`} 
+                              className="text-xs text-gray-500 hover:text-black hover:underline"
+                              target="_blank" // Open in new tab
+                            >
+                              Show Full QR
+                            </Link>
                           </div>
                         </li>
                       ))}

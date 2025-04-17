@@ -5,8 +5,11 @@ import ClubJoinQR from './pages/ClubJoinQR';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import JoinClub from './pages/JoinClub';
+import ClubJoinPage from './pages/ClubJoinPage';
 import JoinFlow from './pages/JoinFlow';
 import AttendEvent from './pages/AttendEvent';
+import EventCheckinPage from './pages/EventCheckinPage';
+import EventCheckinQR from './pages/EventCheckinQR';
 import Welcome from './pages/Welcome';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
@@ -26,10 +29,13 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
           
-          {/* Member routes */}
-          <Route path="/join-flow" element={<JoinFlow />} />
+          {/* Member/Public routes */}
           <Route path="/join" element={<JoinClub />} />
+          <Route path="/join/:clubId" element={<ClubJoinPage />} />
+          <Route path="/join-flow" element={<JoinFlow />} />
           <Route path="/attend" element={<AttendEvent />} />
+          <Route path="/checkin/:inviteCode" element={<EventCheckinPage />} />
+          <Route path="/events/:inviteCode/checkin-qr" element={<EventCheckinQR />} />
           
           {/* Fallback */}
           <Route path="*" element={<Welcome />} />
