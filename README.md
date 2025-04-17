@@ -1,21 +1,23 @@
-# React + TypeScript + Vite
+# Attendify
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Attendify is a modern attendance tracking platform designed for school clubs and organizations. Effortlessly manage attendance, clubs, and members with a clean, intuitive interface.
 
-While this project uses React, Vite supports many popular JS frameworks. [See all the supported frameworks](https://vitejs.dev/guide/#scaffolding-your-first-vite-project).
+## Features
+- Easy attendance tracking for clubs and events
+- Club and member management
+- Detailed participation reports
+- User-friendly, modern design
 
-## Deploy Your Own
+## Getting Started
 
-Deploy your own Vite project with Vercel.
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/vite-react&template=vite-react)
-
-_Live Example: https://vite-react-example.vercel.app_
-
-### Deploying From Your Terminal
-
-You can deploy your new Vite project with a single command from your terminal using [Vercel CLI](https://vercel.com/download):
-
-```shell
-$ vercel
-```
+## License
+MIT
