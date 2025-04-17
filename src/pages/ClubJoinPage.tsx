@@ -163,10 +163,10 @@ const ClubJoinPage: React.FC = () => {
               <h2 className="text-2xl font-semibold text-green-600 mb-3">Successfully Joined!</h2>
               <p className="text-gray-700 mb-5">You have successfully joined <span className="font-medium">{clubInfo.name}</span> as {memberName}.</p>
               <button 
-                onClick={() => navigate('/attend')} // Navigate to attend page after joining
+                onClick={() => navigate('/dashboard')} // Navigate to dashboard after joining
                 className="px-5 py-2 text-sm bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all"
               >
-                Attend an Event
+                Go to Dashboard
               </button>
             </div>
           ) : (

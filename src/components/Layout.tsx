@@ -49,6 +49,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Owner links when logged in */}
             {user && (
               <>
+                <Link to="/dashboard" className={navLinkClasses('/dashboard')}>
+                  Dashboard
+                </Link>
                 <Link to="/clubs" className={navLinkClasses('/clubs')}>
                   My Clubs
                 </Link>

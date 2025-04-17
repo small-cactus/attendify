@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
+import CreateEventModal from '../components/CreateEventModal';
+import { IonIcon } from '@ionic/react';
+import { calendarOutline, peopleOutline, statsChartOutline, personCircleOutline, trashOutline } from 'ionicons/icons';
 
 // Re-declare or import interfaces if needed
 interface Club {
@@ -16,13 +19,26 @@ interface Club {
   created_at: string;
 }
 
+// Reuse Event interface from ClubDetail or define it here
 interface Event {
   id: string;
   club_id: string;
   name: string;
-  event_date: string;
+  event_date: string; // Store as ISO string
   invite_code: string;
   created_at: string;
+  // Add fields for badges and editing
+  checkin_location_enabled?: boolean;
+  checkin_code_enabled?: boolean;
+  checkin_qr_enabled?: boolean; // Derived field
+  checkin_only_during_event?: boolean;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_radius_meters?: number | null;
+  recurrence?: string;
+  recurrence_until?: string | null; // Store as ISO string or null
+  event_start_time?: string | null; // Store as ISO string or null
+  event_end_time?: string | null; // Store as ISO string or null
 }
 
 interface Member {
@@ -31,15 +47,6 @@ interface Member {
   name: string;
   preapproved: boolean;
   created_at: string;
-}
-
-function generateAccessCode(length = 8) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < length; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
 }
 
 const ClubDetail: React.FC = () => {
@@ -53,22 +60,23 @@ const ClubDetail: React.FC = () => {
   const [errorClub, setErrorClub] = useState<string | null>(null);
   
   const [events, setEvents] = useState<Event[]>([]);
-  const [eventName, setEventName] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [eventError, setEventError] = useState<string | null>(null);
-  const [eventLoading, setEventLoading] = useState(false);
-  
   const [currentTab, setCurrentTab] = useState<'events' | 'members' | 'attendance'>('events');
   
   const [members, setMembers] = useState<Member[]>([]);
   const [memberName, setMemberName] = useState('');
   const [memberError, setMemberError] = useState<string | null>(null);
   const [memberLoading, setMemberLoading] = useState(false);
+  const [deleteAllMembersLoading, setDeleteAllMembersLoading] = useState(false); // State for delete all action
   
   const [attendanceTab, setAttendanceTab] = useState<'byEvent' | 'byMember'>('byEvent');
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const csvRef = useRef<HTMLAnchorElement>(null);
+
+  // State to control the create event modal
+  const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
+  const [createEventError, setCreateEventError] = useState<string | null>(null); // Error specifically for the creation process
+  const [eventToEdit, setEventToEdit] = useState<Event | null>(null); // State to hold the event being edited
 
   // Check user auth
   useEffect(() => {
@@ -129,20 +137,29 @@ const ClubDetail: React.FC = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       if (!clubId) return;
-      setEventLoading(true);
-      setEventError(null);
+      setCreateEventError(null);
       const { data, error } = await supabase
         .from('events')
-        .select('id, club_id, name, event_date, invite_code, created_at')
+        // Select ALL fields needed for display and editing
+        .select(`
+          id, club_id, name, event_date, invite_code, created_at,
+          checkin_location_enabled, checkin_code_enabled, checkin_only_during_event,
+          location_lat, location_lng, location_radius_meters,
+          recurrence, recurrence_until, event_start_time, event_end_time
+        `)
         .eq('club_id', clubId)
         .order('event_date', { ascending: false });
       if (error) {
-        setEventError('Failed to fetch events.');
+        setCreateEventError('Failed to fetch events.');
         setEvents([]);
       } else {
-        setEvents(data || []);
+        // Add derived checkin_qr_enabled logic
+        const eventsWithQrFlag = (data || []).map(event => ({
+          ...event,
+          checkin_qr_enabled: !event.checkin_code_enabled 
+        }));
+        setEvents(eventsWithQrFlag);
       }
-      setEventLoading(false);
     };
     fetchEvents();
   }, [clubId]);
@@ -195,35 +212,59 @@ const ClubDetail: React.FC = () => {
 
   // --- Event Handlers (Moved from Clubs.tsx Modal) --- 
   
-  const handleCreateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateEventSubmit = async (eventData: any) => {
     if (!clubId) return;
-    setEventError(null);
-    setEventLoading(true);
-    const invite_code = generateAccessCode(8);
-    const { error } = await supabase
-      .from('events')
-      .insert([{
-        club_id: clubId,
-        name: eventName,
-        event_date: eventDate,
-        invite_code,
-        created_at: new Date().toISOString()
-      }]);
-    if (error) {
-      setEventError('Failed to create event.');
-    } else {
-      setEventName('');
-      setEventDate('');
-      // Refetch events
-      const { data } = await supabase
+    setCreateEventError(null);
+
+    try {
+      let error: any;
+      if (eventToEdit) {
+        // --- Update existing event ---
+        const { error: updateError } = await supabase
+          .from('events')
+          .update({ ...eventData })
+          .eq('id', eventToEdit.id);
+        error = updateError;
+      } else {
+        // --- Insert new event ---
+        const { error: insertError } = await supabase
+          .from('events')
+          .insert([{ ...eventData, club_id: clubId, created_at: new Date().toISOString() }]);
+        error = insertError;
+      }
+
+      if (error) {
+        console.error('Error saving event:', error);
+        throw new Error(error.message || `Failed to ${eventToEdit ? 'update' : 'create'} event. Please try again.`);
+      }
+
+      // Close modal and reset editing state on success
+      setIsCreateEventModalOpen(false);
+      setEventToEdit(null); // Clear the event being edited
+
+      // Refetch events to update the list
+      const { data: refetchData, error: refetchError } = await supabase
         .from('events')
-        .select('id, club_id, name, event_date, invite_code, created_at')
+        .select('id, club_id, name, event_date, invite_code, created_at, checkin_location_enabled, checkin_code_enabled, checkin_only_during_event')
         .eq('club_id', clubId)
         .order('event_date', { ascending: false });
-      setEvents(data || []);
+
+      if (refetchError) {
+        console.error('Error refetching events:', refetchError);
+        setCreateEventError(`Event ${eventToEdit ? 'updated' : 'created'}, but failed to update the list.`);
+      } else {
+        // Add checkin_qr_enabled logic (QR is enabled if checkin_code_enabled is false)
+        const eventsWithQrFlag = (refetchData || []).map(event => ({
+          ...event,
+          checkin_qr_enabled: !event.checkin_code_enabled 
+        }));
+        setEvents(eventsWithQrFlag);
+      }
+
+    } catch (error: any) {
+        setCreateEventError(error.message);
+        throw error;
     }
-    setEventLoading(false);
   };
 
   const handleAddMember = async (e: React.FormEvent) => {
@@ -275,7 +316,69 @@ const ClubDetail: React.FC = () => {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
   };
+
+  // Delete an event by id
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
+    setCreateEventError('Deleting event...');
+    const { error } = await supabase.from('events').delete().eq('id', eventId);
+    if (error) {
+      setCreateEventError('Failed to delete event.');
+    } else {
+      // Refetch events
+      const { data } = await supabase
+        .from('events')
+        .select('id, club_id, name, event_date, invite_code, created_at')
+        .eq('club_id', clubId)
+        .order('event_date', { ascending: false });
+      setEvents(data || []);
+    }
+  };
   
+  // Delete a member by id
+  const handleDeleteMember = async (memberId: string) => {
+    if (!window.confirm('Are you sure you want to remove this member? This action cannot be undone.')) return;
+    setMemberLoading(true);
+    const { error } = await supabase.from('members').delete().eq('id', memberId);
+    if (error) {
+      setMemberError('Failed to remove member.');
+    } else {
+      // Refetch members
+      const { data } = await supabase
+        .from('members')
+        .select('id, club_id, name, preapproved, created_at')
+        .eq('club_id', clubId)
+        .order('created_at', { ascending: false });
+      setMembers(data || []);
+    }
+    setMemberLoading(false);
+  };
+
+  // Delete all members for the club
+  const handleDeleteAllMembers = async () => {
+    if (!clubId || members.length === 0) return; // Don't proceed if no club or no members
+    if (!window.confirm(`Are you sure you want to remove ALL ${members.length} preapproved member(s)? This action cannot be undone.`)) return;
+
+    setDeleteAllMembersLoading(true);
+    setMemberError(null);
+
+    const { error } = await supabase
+      .from('members')
+      .delete()
+      .eq('club_id', clubId);
+
+    if (error) {
+      console.error('Error deleting all members:', error);
+      setMemberError('Failed to remove all members. Please try again.');
+    } else {
+      setMembers([]); // Clear the list immediately on success
+      // Optionally, refetch to confirm, though setting to [] is faster UI-wise
+      // const { data } = await supabase.from('members').select('...').eq(...);
+      // setMembers(data || []);
+    }
+    setDeleteAllMembersLoading(false);
+  };
+
   // --- Render Logic --- 
 
   if (authLoading || loadingClub) {
@@ -396,134 +499,195 @@ const ClubDetail: React.FC = () => {
           >
             {currentTab === 'events' && (
               <div>
-                <h3 className="text-lg font-semibold mb-4 text-black">Manage Events</h3>
-                  {eventLoading ? (
-                    <div className="text-center py-4 text-sm text-gray-500">Loading events...</div>
-                  ) : events.length > 0 ? (
-                    <ul className="mb-6 space-y-3">
-                      {events.map(event => (
-                        <li key={event.id} className="p-4 rounded border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                          <div className="flex-1">
-                            <div className="font-medium text-md text-black">{event.name}</div>
-                            <div className="text-sm text-gray-500 mt-0.5">{new Date(event.event_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                            <div className="text-sm font-mono px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded inline-block mt-2">
-                              Invite Code: {event.invite_code}
+                {/* Header with Create Event Button */}
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-black flex items-center gap-2">
+                    <IonIcon icon={calendarOutline} className="text-xl" />
+                    Manage Events
+                  </h3>
+                  <button
+                    onClick={() => setIsCreateEventModalOpen(true)}
+                    className="px-4 py-2 text-sm bg-black text-white font-medium rounded-md hover:bg-gray-800 transition-all"
+                  >
+                    Create Event
+                  </button>
+                </div>
+
+                {/* Display event creation error if any */}
+                {createEventError && <div className="mb-4 p-3 bg-red-100 text-red-700 text-sm rounded-md">{createEventError}</div>}
+
+                {events.length > 0 ? (
+                  <ul className="mb-6 grid grid-cols-1 gap-4">
+                    {events.map(event => (
+                      <li key={event.id} className="group bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all overflow-hidden">
+                        <div className="flex flex-col sm:flex-row">
+                          {/* Left side - Date indicator */}
+                          <div className="sm:w-24 p-4 bg-gray-50 flex flex-row sm:flex-col items-center justify-center text-center border-b sm:border-b-0 sm:border-r border-gray-200">
+                            <div className="text-2xl font-bold text-gray-900">
+                              {new Date(event.event_date).getDate()}
+                            </div>
+                            <div className="text-sm text-gray-600 ml-2 sm:ml-0">
+                              {new Date(event.event_date).toLocaleString('en-US', { month: 'short' })}
                             </div>
                           </div>
-                          <div className="flex flex-col items-center gap-2 ml-auto flex-shrink-0">
-                            <QRCodeCanvas value={`${window.location.origin}/checkin/${event.invite_code}`} size={50} level="L" />
-                            <Link 
-                              to={`/events/${event.invite_code}/checkin-qr`} 
-                              className="text-xs text-gray-500 hover:text-black hover:underline"
-                              target="_blank" // Open in new tab
-                            >
-                              Show Full QR
-                            </Link>
+                          
+                          {/* Right side - Event details */}
+                          <div className="flex-1 p-4">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                              <div className="flex-1">
+                                <h3 className="text-lg font-semibold text-gray-900 group-hover:text-black transition-colors">
+                                  {event.name}
+                                </h3>
+                                <div className="mt-1 text-sm text-gray-600">
+                                  {new Date(event.event_date).toLocaleString('en-US', { 
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    hour: 'numeric',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
+                                {/* Add Event Badges Here */}
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {event.checkin_location_enabled && <EventTypeBadge type="geo" />}
+                                  {event.checkin_qr_enabled && !event.checkin_code_enabled && <EventTypeBadge type="qr" />}
+                                  {event.checkin_code_enabled && <EventTypeBadge type="code" />}
+                                  {event.checkin_only_during_event && <EventTypeBadge type="time" />}
+                                </div>
+                                <div className="mt-2 inline-flex items-center px-2.5 py-1 rounded-md bg-gray-100 border border-gray-200">
+                                  <code className="text-xs font-mono text-gray-800">
+                                    {event.invite_code}
+                                  </code>
+                                </div>
+                              </div>
+                              
+                              <div className="flex flex-col items-center gap-3">
+                                <div className="w-20 h-20">
+                                  <QRCodeCanvas 
+                                    value={`${window.location.origin}/checkin/${event.invite_code}`} 
+                                    size={80} 
+                                    level="L"
+                                    className="w-full h-full"
+                                  />
+                                </div>
+                                {/* Action Buttons - Arranged Horizontally */}
+                                <div className="flex flex-row items-center justify-center gap-2 w-full mt-2">
+                                  <Link 
+                                    to={`/events/${event.invite_code}/checkin-qr`} 
+                                    className="text-xs text-center px-2 py-1 bg-gray-800 text-white font-medium rounded-md hover:bg-black transition-all whitespace-nowrap"
+                                    target="_blank"
+                                    title="Show Full QR Code"
+                                  >
+                                    Show Full QR Code
+                                  </Link>
+                                  <button
+                                    onClick={() => handleDeleteEvent(event.id)}
+                                    className="text-xs text-center px-2 py-1 text-red-600 bg-red-50 font-medium rounded-md hover:bg-red-100 transition-all whitespace-nowrap"
+                                    title="Delete Event"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="mb-6 text-center text-sm text-gray-500 py-6 border border-gray-200 rounded-md">No events created yet.</div>
-                  )}
-                  
-                  {/* Create Event Form - styled as a card */}
-                  <div className="mt-6 p-5 border border-gray-200 rounded-md bg-white">
-                    <form onSubmit={handleCreateEvent} className="space-y-4">
-                      <h4 className="text-md font-semibold text-black">Create New Event</h4>
-                      <div>
-                        <label htmlFor="eventName" className="block text-xs font-medium text-gray-600 mb-1">Event Name</label>
-                        <input
-                          id="eventName"
-                          type="text"
-                          placeholder="e.g., Weekly Meeting"
-                          value={eventName}
-                          onChange={e => setEventName(e.target.value)}
-                          required
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white"
-                          disabled={eventLoading}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="eventDate" className="block text-xs font-medium text-gray-600 mb-1">Event Date</label>
-                        <input
-                          id="eventDate"
-                          type="date"
-                          value={eventDate}
-                          onChange={e => setEventDate(e.target.value)}
-                          required
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white"
-                          disabled={eventLoading}
-                        />
-                      </div>
-                      {eventError && <div className="text-red-600 text-xs">{eventError}</div>}
-                      <button
-                        type="submit"
-                        className="w-full sm:w-auto px-4 py-2 text-sm bg-black text-white font-medium rounded-md hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={eventLoading}
-                      >
-                        {eventLoading ? 'Creating...' : 'Create Event'}
-                      </button>
-                    </form>
-                  </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="mb-6 text-center text-sm text-gray-500 py-6 border border-gray-200 rounded-md">No events created yet.</div>
+                )}
               </div>
             )}
 
             {currentTab === 'members' && (
               <div>
-                <h3 className="text-lg font-semibold mb-4 text-black">Manage Preapproved Members</h3>
-                 {/* Add Member Form - styled as card */}                 
-                 <div className="mb-6 p-5 border border-gray-200 rounded-md bg-white">
-                    <form onSubmit={handleAddMember} className="flex flex-col sm:flex-row gap-3">
-                        <div className="flex-grow">
-                            <label htmlFor="memberName" className="block text-xs font-medium text-gray-600 mb-1">Member Name</label>
-                            <input
-                                id="memberName"
-                                type="text"
-                                placeholder="Name to preapprove for joining"
-                                value={memberName}
-                                onChange={e => setMemberName(e.target.value)}
-                                required
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white"
-                                disabled={memberLoading}
-                            />
+                {/* Updated Header with Delete All button */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                  <h3 className="text-lg font-semibold text-black flex items-center gap-2">
+                    <IonIcon icon={peopleOutline} className="text-xl" />
+                    Manage Preapproved Members
+                  </h3>
+                  <button
+                    onClick={handleDeleteAllMembers}
+                    className="px-3 py-1 text-xs bg-red-600 text-white font-medium rounded hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={memberLoading || deleteAllMembersLoading || members.length === 0}
+                  >
+                    {deleteAllMembersLoading ? 'Removing All...' : 'Remove All Members'}
+                  </button>
+                </div>
+
+                {/* Add Member Form - styled as card */}
+                <div className="mb-6 p-5 border border-gray-200 rounded-md bg-white">
+                  <form onSubmit={handleAddMember} className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-grow">
+                      <label htmlFor="memberName" className="block text-xs font-medium text-gray-600 mb-1">Member Name</label>
+                      <input
+                        id="memberName"
+                        type="text"
+                        placeholder="Name to preapprove for joining"
+                        value={memberName}
+                        onChange={e => setMemberName(e.target.value)}
+                        required
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white"
+                        disabled={memberLoading}
+                      />
+                    </div>
+                    <div className="self-end">
+                      <button
+                        type="submit"
+                        className="w-full sm:w-auto px-4 py-2 text-sm bg-black text-white font-medium rounded-md hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={memberLoading}
+                      >
+                        {memberLoading ? 'Adding...' : 'Add Member'}
+                      </button>
+                    </div>
+                  </form>
+                  {memberError && <div className="text-red-600 text-xs mt-2">{memberError}</div>}
+                </div>
+                
+                {/* Member List */}
+                {memberLoading ? (
+                  <div className="text-center py-4 text-sm text-gray-500">Loading members...</div>
+                ) : members.length > 0 ? (
+                  <ul className="space-y-2">
+                    {members.map(member => (
+                      <li key={member.id} className="p-3 rounded border border-gray-200 flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-3 flex-grow">
+                          <IonIcon icon={personCircleOutline} className="text-2xl text-gray-400 flex-shrink-0" />
+                          <div className="flex flex-col flex-grow min-w-0">
+                            <span className="text-black truncate">{member.name}</span>
+                            {member.preapproved && (
+                              <span className="mt-0.5 text-xs font-medium px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded self-start">
+                                Preapproved
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="self-end">
-                            <button
-                                type="submit"
-                                className="w-full sm:w-auto px-4 py-2 text-sm bg-black text-white font-medium rounded-md hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={memberLoading}
-                            >
-                                {memberLoading ? 'Adding...' : 'Add Member'}
-                            </button>
-                        </div>
-                    </form>
-                    {memberError && <div className="text-red-600 text-xs mt-2">{memberError}</div>}
-                 </div>
-                 
-                 {/* Member List */}                 
-                  {memberLoading ? (
-                    <div className="text-center py-4 text-sm text-gray-500">Loading members...</div>
-                  ) : members.length > 0 ? (
-                    <ul className="space-y-2">
-                      {members.map(member => (
-                        <li key={member.id} className="p-3 rounded border border-gray-200 flex items-center justify-between text-sm">
-                          <span className="text-black">{member.name}</span>
-                          {member.preapproved && <span className="text-xs font-medium px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded">Preapproved</span>}
-                          {/* TODO: Add button to remove preapproval or member */}                        
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="text-center text-sm text-gray-500 py-6 border border-gray-200 rounded-md">No members added yet.</div>
-                  )}
+                        <button
+                          onClick={() => handleDeleteMember(member.id)}
+                          className="ml-3 p-1 text-red-600 hover:text-red-800 rounded hover:bg-red-100 transition-all flex-shrink-0"
+                          disabled={memberLoading}
+                          aria-label="Remove member"
+                        >
+                          <IonIcon icon={trashOutline} className="text-lg" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-center text-sm text-gray-500 py-6 border border-gray-200 rounded-md">No members added yet.</div>
+                )}
               </div>
             )}
 
             {currentTab === 'attendance' && (
               <div>
                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-4">
-                   <h3 className="text-lg font-semibold text-black">Attendance Records</h3>
+                   <h3 className="text-lg font-semibold text-black flex items-center gap-2">
+                     <IonIcon icon={statsChartOutline} className="text-xl" />
+                     Attendance Records
+                   </h3>
                    <div className="flex items-center gap-2">
                         <div className="flex space-x-1">
                             <button
@@ -593,12 +757,74 @@ const ClubDetail: React.FC = () => {
           </motion.div>
         </AnimatePresence>
 
+        {/* Render the Create Event Modal */}
+        <CreateEventModal
+          isOpen={isCreateEventModalOpen}
+          onClose={() => {
+            setIsCreateEventModalOpen(false);
+            setEventToEdit(null); // Reset editing state when closing
+          }}
+          onSubmit={handleCreateEventSubmit}
+          eventToEdit={eventToEdit}
+        />
+
       </div>
     </Layout>
   );
 };
 
 export default ClubDetail;
+
+// --- EventTypeBadge Component (copied from Dashboard) ---
+const eventTypeExplanations: Record<string, string> = {
+  geo: 'Geo-fenced: Check-in requires device location to be at the event.',
+  code: 'Code Required: Check-in requires entering the event code.',
+  qr: 'QR/Direct: Check-in via QR code scan or direct link.',
+  time: 'Time Window: Check-in is only allowed during the specified event time.'
+};
+
+function EventTypeBadge({ type }: { type: 'geo' | 'code' | 'qr' | 'time' }) {
+  const [show, setShow] = useState(false);
+  const typeStyles: Record<string, string> = {
+    geo: 'bg-blue-100 text-blue-700',
+    code: 'bg-yellow-100 text-yellow-700',
+    qr: 'bg-green-100 text-green-700',
+    time: 'bg-purple-100 text-purple-700'
+  };
+  const typeLabels: Record<string, string> = {
+    geo: 'Geo-fenced',
+    code: 'Code Only',
+    qr: 'QR/Link',
+    time: 'Time Restricted'
+  };
+
+  return (
+    <span className="relative inline-block" onMouseLeave={() => setShow(false)}>
+      <span
+        className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 ${typeStyles[type] || ''}`}
+        onMouseEnter={() => setShow(true)}
+      >
+        {typeLabels[type]}
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 opacity-60">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+        </svg>
+      </span>
+      <AnimatePresence>
+        {show && (
+          <motion.div 
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-10 left-0 mt-1.5 w-56 p-2 bg-white border border-gray-300 rounded-md shadow-lg text-xs text-gray-700"
+          >
+            {eventTypeExplanations[type]}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </span>
+  );
+}
 
 // Keep interfaces at the end or import from a types file
 /*
