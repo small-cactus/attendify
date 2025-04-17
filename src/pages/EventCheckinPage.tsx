@@ -123,38 +123,18 @@ const EventCheckinPage: React.FC = () => {
                 setMemberUuid(finalMemberUuid); // Update state
               }
             } else {
-              // Member not found by UUID or name, create new member
-              const { data: newMember, error: insertError } = await supabase
-                .from('members')
-                .insert([{ 
-                  club_id: eventInfo.club_id, 
-                  name: memberName.trim(),
-                  member_uuid: finalMemberUuid,
-                  preapproved: false // Assume not preapproved in this flow
-                }])
-                .select('id')
-                .single();
-                
-              if (insertError || !newMember) {
-                throw insertError || new Error('Failed to create member profile.');
-              }
-              
-              memberId = newMember.id;
-              // Store new UUID in localStorage
-              localStorage.setItem('attendify_member_id', finalMemberUuid);
-              setMemberUuid(finalMemberUuid); // Update state
-
-              // Add to saved clubs in localStorage if not already there
-              const storedClubs = JSON.parse(localStorage.getItem('attendify_clubs') || '[]');
-              if (!storedClubs.some((c: any) => c.id === eventInfo.club_id)) {
-                  storedClubs.push({
-                    id: eventInfo.club_id,
-                    name: eventInfo.club_name || 'Unknown Club',
-                    member_name: memberName.trim()
-                  });
-                  localStorage.setItem('attendify_clubs', JSON.stringify(storedClubs));
-              }
+              // Member not found by UUID or name
+              // Prompt user to join instead of creating member
+              setCheckinError(`Member '${memberName.trim()}' not found for ${eventInfo.club_name || 'this club'}. Please join the club first.`);
+              setCheckinLoading(false);
+              return; // Stop the check-in process
             }
+        }
+
+        // If we reached here, memberId must be valid
+        if (!memberId) {
+            // This should technically not be reachable if the logic above is correct
+            throw new Error('Failed to identify member.'); 
         }
 
         // 2. Check for existing attendance record
@@ -268,7 +248,20 @@ const EventCheckinPage: React.FC = () => {
                     disabled={checkinLoading}
                   />
                 </div>
-                {checkinError && <p className="text-red-600 text-xs">{checkinError}</p>}
+                {checkinError && (
+                  <div className="text-red-600 text-xs">
+                    {checkinError}
+                    {/* Add link to join page if error is due to member not found */}
+                    {checkinError.includes('not found for') && eventInfo && (
+                       <button 
+                         onClick={() => navigate(`/join/${eventInfo.club_id}`)}
+                         className="ml-2 underline text-blue-600 hover:text-blue-800 text-xs"
+                       >
+                         Join Club Now
+                       </button>
+                    )}
+                  </div>
+                )}
                 <button
                   type="submit"
                   className="w-full px-4 py-2.5 text-sm bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"

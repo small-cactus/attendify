@@ -278,43 +278,10 @@ const AttendEvent: React.FC = () => {
             setMemberUuid(nameMatch.member_uuid);
           }
         } else {
-          // Create new member
-          const newUuid = memberUuid || crypto.randomUUID();
-          
-          const { data: newMember, error: insertError } = await supabase
-            .from('members')
-            .insert([{ 
-              club_id: eventDetails.club_id, 
-              name: memberName,
-              member_uuid: newUuid,
-              preapproved: false
-            }])
-            .select('id')
-            .single();
-            
-          if (insertError || !newMember) {
-            setError('Failed to register as a member. Please try again.');
-            setLoading(false);
-            return;
-          }
-          
-          memberId = newMember.id;
-          
-          // Save UUID if we didn't have one
-          if (!memberUuid) {
-            localStorage.setItem('attendify_member_id', newUuid);
-            setMemberUuid(newUuid);
-          }
-          
-          // Add to saved clubs
-          const updatedClubs = [...savedClubs];
-          updatedClubs.push({
-            id: eventDetails.club_id,
-            name: eventDetails.club_name || 'Unknown Club',
-            member_name: memberName
-          });
-          localStorage.setItem('attendify_clubs', JSON.stringify(updatedClubs));
-          setSavedClubs(updatedClubs);
+          // Member not found by UUID or name
+          setError(`Member '${memberName}' not found for ${eventDetails.club_name || 'this club'}. Please join the club first.`);
+          setLoading(false);
+          return; // Stop the check-in process
         }
       }
       
@@ -491,6 +458,15 @@ const AttendEvent: React.FC = () => {
               {error && (
                 <div className="mb-4 p-3 rounded-md bg-gray-50 border border-gray-200 text-red-600 text-sm">
                   {error}
+                  {/* Add link to join page if error is due to member not found */}
+                  {error.includes('not found for') && (
+                    <a 
+                       href="/join-flow" // Link to the general join flow
+                       className="ml-2 underline text-blue-600 hover:text-blue-800 text-xs"
+                     >
+                       Join a Club
+                     </a>
+                  )}
                 </div>
               )}
               
@@ -563,6 +539,15 @@ const AttendEvent: React.FC = () => {
               {error && (
                 <div className="mb-4 p-3 rounded-md bg-gray-50 border border-gray-200 text-red-600 text-sm">
                   {error}
+                  {/* Add link to join page if error is due to member not found */}
+                  {error.includes('not found for') && (
+                    <a 
+                       href="/join-flow" // Link to the general join flow
+                       className="ml-2 underline text-blue-600 hover:text-blue-800 text-xs"
+                     >
+                       Join a Club
+                     </a>
+                  )}
                 </div>
               )}
               
