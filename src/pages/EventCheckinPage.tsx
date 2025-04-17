@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
 import Logo from '../components/Logo';
+import { v4 as uuidv4 } from 'uuid';
 
 interface EventInfo {
   name: string;
@@ -20,6 +21,12 @@ const EventCheckinPage: React.FC = () => {
   const [checkinLoading, setCheckinLoading] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
   const [checkinSuccess, setCheckinSuccess] = useState(false);
+
+  // Fetch member_uuid from localStorage
+  const [memberUuid, setMemberUuid] = useState<string | null>(null);
+  useEffect(() => {
+    setMemberUuid(localStorage.getItem('attendify_member_id'));
+  }, []);
 
   useEffect(() => {
     const fetchEventInfo = async () => {
@@ -74,30 +81,134 @@ const EventCheckinPage: React.FC = () => {
      setCheckinError(null);
      setCheckinSuccess(false);
 
-     // TODO: Implement check-in logic
-     // 1. Find member ID by name and club_id
-     // 2. Check if member is already checked in for this event?
-     // 3. Add record to attendance table
-     // 4. Handle errors (member not found, etc.)
+     try {
+        // 1. Find or create member
+        let memberId: number | null = null;
+        let finalMemberUuid = memberUuid || uuidv4(); // Use existing or generate new UUID
 
-     // For now, simulate success
-     await new Promise(resolve => setTimeout(resolve, 1000)); 
-     console.log(`Attempting to check in ${memberName} to event ${eventInfo.name} (Invite: ${inviteCode})`);
+        // Try finding member by UUID first (if available)
+        if (memberUuid) {
+          const { data: memberByUuid } = await supabase
+            .from('members')
+            .select('id')
+            .eq('club_id', eventInfo.club_id)
+            .eq('member_uuid', memberUuid)
+            .single();
+          if (memberByUuid) {
+            memberId = memberByUuid.id;
+          }
+        }
 
-     // Placeholder: Replace with actual Supabase calls
-     // const { error } = await supabase.rpc('check_in_member', { 
-     //   p_invite_code: inviteCode, 
-     //   p_member_name: memberName 
-     // });
+        // If not found by UUID, try finding by name
+        if (!memberId) {
+            const { data: memberByName, error: nameError } = await supabase
+              .from('members')
+              .select('id, member_uuid')
+              .eq('club_id', eventInfo.club_id)
+              .eq('name', memberName.trim())
+              .single();
 
-     // if (error) {
-     //   setCheckinError(`Check-in failed: ${error.message}`);
-     // } else {
-     //   setCheckinSuccess(true);
-     // }
-     setCheckinSuccess(true); // Temporary success for demo
+            if (nameError && nameError.code !== 'PGRST116') {
+              throw nameError; // Throw unexpected errors
+            }
 
-     setCheckinLoading(false);
+            if (memberByName) {
+              // Found member by name
+              memberId = memberByName.id;
+              finalMemberUuid = memberByName.member_uuid || finalMemberUuid; // Use existing DB UUID if available
+              // If member found by name had no UUID or didn't match stored UUID, update it
+              if (!memberByName.member_uuid || (memberUuid && memberUuid !== memberByName.member_uuid)) {
+                await supabase.from('members').update({ member_uuid: finalMemberUuid }).eq('id', memberId);
+                localStorage.setItem('attendify_member_id', finalMemberUuid); // Update localStorage
+                setMemberUuid(finalMemberUuid); // Update state
+              }
+            } else {
+              // Member not found by UUID or name, create new member
+              const { data: newMember, error: insertError } = await supabase
+                .from('members')
+                .insert([{ 
+                  club_id: eventInfo.club_id, 
+                  name: memberName.trim(),
+                  member_uuid: finalMemberUuid,
+                  preapproved: false // Assume not preapproved in this flow
+                }])
+                .select('id')
+                .single();
+                
+              if (insertError || !newMember) {
+                throw insertError || new Error('Failed to create member profile.');
+              }
+              
+              memberId = newMember.id;
+              // Store new UUID in localStorage
+              localStorage.setItem('attendify_member_id', finalMemberUuid);
+              setMemberUuid(finalMemberUuid); // Update state
+
+              // Add to saved clubs in localStorage if not already there
+              const storedClubs = JSON.parse(localStorage.getItem('attendify_clubs') || '[]');
+              if (!storedClubs.some((c: any) => c.id === eventInfo.club_id)) {
+                  storedClubs.push({
+                    id: eventInfo.club_id,
+                    name: eventInfo.club_name || 'Unknown Club',
+                    member_name: memberName.trim()
+                  });
+                  localStorage.setItem('attendify_clubs', JSON.stringify(storedClubs));
+              }
+            }
+        }
+
+        // 2. Check for existing attendance record
+        // Removed the initial incorrect check based on inviteCode
+        
+        // Re-fetch event ID properly - needed for attendance table
+        const { data: eventData, error: eventFetchError } = await supabase
+            .from('events')
+            .select('id')
+            .eq('invite_code', inviteCode)
+            .single();
+        
+        if (eventFetchError || !eventData) {
+            throw eventFetchError || new Error('Could not verify event details for check-in.');
+        }
+        const eventId = eventData.id;
+
+        // Check again with proper event ID
+        const { data: existingAttendanceProper, error: attendanceCheckErrorProper } = await supabase
+            .from('attendance')
+            .select('id')
+            .eq('event_id', eventId)
+            .eq('member_id', memberId)
+            .maybeSingle(); // Use maybeSingle to handle 0 or 1 result without error
+        
+        if (attendanceCheckErrorProper) {
+            throw attendanceCheckErrorProper;
+        }
+
+        if (existingAttendanceProper) {
+          // Already checked in
+          setCheckinSuccess(true);
+          // Optionally set a specific message for already checked in?
+        } else {
+          // 3. Add record to attendance table
+          const { error: insertAttendanceError } = await supabase
+            .from('attendance')
+            .insert([{ 
+              event_id: eventId, 
+              member_id: memberId
+            }]);
+
+          if (insertAttendanceError) {
+            throw insertAttendanceError;
+          }
+          setCheckinSuccess(true);
+        }
+
+     } catch (error: any) {
+        console.error('Error during check-in:', error);
+        setCheckinError(`Check-in failed: ${error.message || 'Please try again.'}`);
+     } finally {
+        setCheckinLoading(false);
+     }
   };
 
   return (
