@@ -24,31 +24,34 @@ const CATEGORIES = [
 
 const overlayVariants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1 }
+  visible: { 
+    opacity: 1,
+    transition: { duration: 0.2 }
+  }
 };
 
 const modalVariants = {
   hidden: {
     opacity: 0,
-    y: 50,
-    scale: 0.95
+    y: 20,
+    scale: 0.98
   },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
     transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 30
+      type: "tween",
+      duration: 0.25,
+      ease: "easeOut"
     }
   },
   exit: {
     opacity: 0,
-    y: 50,
-    scale: 0.95,
+    y: 20,
+    scale: 0.98,
     transition: {
-      duration: 0.2
+      duration: 0.15
     }
   }
 };
@@ -68,156 +71,115 @@ const CreateClubModal: React.FC<CreateClubModalProps> = ({
     e.preventDefault();
     onSubmit(formData);
     setFormData({ name: '', description: '', category: '' });
-    onClose();
+    // Keep modal open logic handled by parent
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center"
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" // Increased overlay opacity
           variants={overlayVariants}
           initial="hidden"
           animate="visible"
           exit="hidden"
+          onClick={onClose} // Close on overlay click
         >
           <motion.div 
-            className="w-full max-w-lg mx-4"
+            className="w-full max-w-lg bg-white rounded-md" // Simplified modal container
             variants={modalVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
           >
-            <div className="bg-white rounded-2xl shadow-2xl">
-              {/* Header */}
-              <div className="px-6 py-4 border-b border-[#1d1d1f]/10">
-                <div className="flex items-center justify-between">
-                  <motion.h2 
-                    className="text-2xl font-semibold text-[#1d1d1f]"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    Create New Club
-                  </motion.h2>
-                  <motion.button
-                    onClick={onClose}
-                    className="text-[#1d1d1f]/60 hover:text-[#1d1d1f] transition-colors"
-                    whileHover={{ scale: 1.1, rotate: 90 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </motion.button>
-                </div>
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-black">
+                Create New Club
+              </h2>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-black transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Form */}
+            <form 
+              onSubmit={handleSubmit} 
+              className="p-6 space-y-5"
+            >
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Club Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white"
+                  placeholder="e.g., Chess Club"
+                  required
+                />
               </div>
 
-              {/* Form */}
-              <motion.form 
-                onSubmit={handleSubmit} 
-                className="p-6 space-y-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <select
+                  id="category"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white appearance-none"
+                  required
                 >
-                  <label htmlFor="name" className="block text-sm font-medium text-[#1d1d1f]">
-                    Club Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-[#f5f5f7] border border-transparent
-                             focus:outline-none focus:border-[#1d1d1f]/30 focus:bg-white
-                             text-[#1d1d1f] placeholder-[#1d1d1f]/40 transition-all duration-200"
-                    placeholder="Enter club name"
-                    required
-                  />
-                </motion.div>
+                  <option value="">Select a category</option>
+                  {CATEGORIES.map(category => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                {/* Add down arrow icon for select */}
+              </div>
 
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <label htmlFor="category" className="block text-sm font-medium text-[#1d1d1f]">
-                    Category
-                  </label>
-                  <select
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-[#f5f5f7] border border-transparent
-                             focus:outline-none focus:border-[#1d1d1f]/30 focus:bg-white
-                             text-[#1d1d1f] transition-all duration-200"
-                    required
-                  >
-                    <option value="">Select a category</option>
-                    {CATEGORIES.map(category => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </motion.div>
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white min-h-[80px] resize-y"
+                  placeholder="Describe your club's purpose and activities"
+                  required
+                />
+              </div>
 
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
+              {/* Footer Buttons */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm bg-white text-black border border-gray-300 font-medium rounded-md hover:bg-gray-50 transition-all"
                 >
-                  <label htmlFor="description" className="block text-sm font-medium text-[#1d1d1f]">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-[#f5f5f7] border border-transparent
-                             focus:outline-none focus:border-[#1d1d1f]/30 focus:bg-white
-                             text-[#1d1d1f] placeholder-[#1d1d1f]/40 transition-all duration-200
-                             min-h-[100px] resize-y"
-                    placeholder="Describe your club's purpose and activities"
-                    required
-                  />
-                </motion.div>
-
-                <motion.div 
-                  className="flex justify-end gap-3 pt-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm bg-black text-white font-medium rounded-md hover:bg-gray-800 transition-all"
                 >
-                  <motion.button
-                    type="button"
-                    onClick={onClose}
-                    className="secondary-button"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Cancel
-                  </motion.button>
-                  <motion.button
-                    type="submit"
-                    className="primary-button"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Create Club
-                  </motion.button>
-                </motion.div>
-              </motion.form>
-            </div>
+                  Create Club
+                </button>
+              </div>
+            </form>
           </motion.div>
         </motion.div>
       )}
