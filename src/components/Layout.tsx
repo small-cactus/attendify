@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import Logo from './Logo';
 import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -101,6 +102,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {children}
       </main>
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 };
