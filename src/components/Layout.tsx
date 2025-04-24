@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import Logo from './Logo';
+import { Analytics } from "@vercel/analytics/react"
 
 interface LayoutProps {
   children: React.ReactNode;
