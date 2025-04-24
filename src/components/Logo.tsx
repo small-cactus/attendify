@@ -32,7 +32,7 @@ const Logo: React.FC<LogoProps> = ({
           className={`font-bold text-black ${size ? '' : textClassName}`}
           style={textStyle}
         >
-          Attendify
+          attendify
         </span>
       )}
     </span>
