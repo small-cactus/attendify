@@ -11,6 +11,43 @@ interface EventInfo {
   club_name?: string;
 }
 
+// Shared transition for content (blur lingers longer than fade)
+const TAB_TRANSITION = {
+  opacity: { duration: 0.16, ease: [0.4, 0, 0.2, 1] },
+  filter: { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
+};
+
+const tabVariants = {
+  hidden: {
+    opacity: 0,
+    filter: 'blur(16px)',
+    scale: 0.97,
+    y: -20
+  },
+  visible: {
+    opacity: 1,
+    filter: 'blur(0px)',
+    scale: 1,
+    y: 0,
+    transition: {
+      ...TAB_TRANSITION,
+      type: 'spring',
+      damping: 25,
+      stiffness: 300
+    }
+  },
+  exit: {
+    opacity: 0,
+    filter: 'blur(16px)',
+    scale: 0.97,
+    y: -20,
+    transition: {
+      ...TAB_TRANSITION,
+      duration: 0.2
+    }
+  }
+};
+
 const EventCheckinQR: React.FC = () => {
   const { inviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
@@ -71,11 +108,22 @@ const EventCheckinQR: React.FC = () => {
       </div>
       
       {loading ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div
+          variants={tabVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
           <span className="text-gray-500">Loading QR Code...</span>
         </motion.div>
       ) : error ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+        <motion.div
+          variants={tabVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          className="text-center"
+        >
           <p className="text-red-600 mb-4">{error}</p>
            <button 
              onClick={() => navigate(-1)} // Go back to previous page (likely ClubDetail)
@@ -86,9 +134,10 @@ const EventCheckinQR: React.FC = () => {
         </motion.div>
       ) : eventInfo ? (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
+          variants={tabVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
           className="text-center flex flex-col items-center max-w-md w-full"
         >
           <h1 className="text-3xl font-bold text-black mb-1">

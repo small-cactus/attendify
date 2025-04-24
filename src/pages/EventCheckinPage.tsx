@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { calculateDistance } from '../utils/geolocation'; // Import helpers
 import { IonIcon } from '@ionic/react';
 import { locationOutline } from 'ionicons/icons';
+import { motion } from 'framer-motion';
 
 interface EventInfo {
   id: string; // Need event ID for attendance
@@ -23,6 +24,43 @@ interface EventInfo {
 }
 
 type LocationPermissionStatus = 'prompt' | 'checking' | 'granted' | 'denied';
+
+// Shared transition for content (blur lingers longer than fade)
+const TAB_TRANSITION = {
+  opacity: { duration: 0.16, ease: [0.4, 0, 0.2, 1] },
+  filter: { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
+};
+
+const tabVariants = {
+  hidden: {
+    opacity: 0,
+    filter: 'blur(16px)',
+    scale: 0.97,
+    y: -20
+  },
+  visible: {
+    opacity: 1,
+    filter: 'blur(0px)',
+    scale: 1,
+    y: 0,
+    transition: {
+      ...TAB_TRANSITION,
+      type: 'spring',
+      damping: 25,
+      stiffness: 300
+    }
+  },
+  exit: {
+    opacity: 0,
+    filter: 'blur(16px)',
+    scale: 0.97,
+    y: -20,
+    transition: {
+      ...TAB_TRANSITION,
+      duration: 0.2
+    }
+  }
+};
 
 const EventCheckinPage: React.FC = () => {
   const { inviteCode } = useParams<{ inviteCode: string }>();
@@ -342,17 +380,34 @@ const EventCheckinPage: React.FC = () => {
 
       <div className="text-center max-w-md w-full bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
         {loading ? (
-          <p className="text-gray-500">Loading Event Information...</p>
+          <motion.div
+            variants={tabVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <p className="text-gray-500">Loading Event Information...</p>
+          </motion.div>
         ) : error ? (
-          <div>
+          <motion.div
+            variants={tabVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
              <p className="text-red-600 mb-4">{error}</p>
              <button onClick={() => navigate('/')} className="text-sm text-black border-b border-gray-300 hover:border-black">
                 Back to Home
              </button>
-          </div>
+          </motion.div>
         ) : eventInfo ? (
           checkinSuccess ? (
-            <div>
+            <motion.div
+              variants={tabVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
               <h2 className="text-2xl font-semibold text-green-600 mb-3">Checked In!</h2>
               <p className="text-gray-700 mb-5">You've successfully checked in to <span className="font-medium">{eventInfo.name}</span> for {eventInfo.club_name}.</p>
               <button 
@@ -361,9 +416,14 @@ const EventCheckinPage: React.FC = () => {
               >
                 Go to Dashboard
               </button>
-            </div>
+            </motion.div>
           ) : (
-            <>
+            <motion.div
+              variants={tabVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
               <p className="text-sm text-gray-500 mb-1">Checking in for:</p>
               <h1 className="text-3xl font-bold text-black mb-1">
                 {eventInfo.name}
@@ -375,9 +435,8 @@ const EventCheckinPage: React.FC = () => {
 
               {/* Conditional Location Notice */}
               {eventInfo.checkin_location_enabled && eventInfo.location_lat && eventInfo.location_lng && (
-                <> 
-                {/* Show 'Required' notice ONLY if status is not yet granted */}
-                {(locationPermissionStatus === 'prompt' || locationPermissionStatus === 'checking' || locationPermissionStatus === 'denied') && (
+                // Show 'Required' notice ONLY if status is not yet granted
+                (locationPermissionStatus === 'prompt' || locationPermissionStatus === 'checking' || locationPermissionStatus === 'denied') && (
                    <div className="mb-6 text-sm p-3 rounded-lg border border-yellow-200 bg-yellow-50 flex items-center gap-2">
                       <IonIcon icon={locationOutline} className="text-yellow-700 text-xl flex-shrink-0" />
                       <div className="text-yellow-800">
@@ -405,19 +464,8 @@ const EventCheckinPage: React.FC = () => {
                         )}
                       </div>
                    </div>
-                 )}
-
-                 {/* Show 'Verified' notice ONLY if status is granted */}
-                  {locationPermissionStatus === 'granted' && (
-                    <div className="mb-6 text-sm p-3 rounded-lg border border-green-200 bg-green-50 flex items-center justify-center gap-2">
-                       <IonIcon icon={locationOutline} className="text-green-700 text-xl flex-shrink-0" />
-                       <div className="text-green-800">
-                          <span className="font-medium">Location Verified!</span>
-                       </div>
-                     </div>
-                  )}
-                  </>
-               )}
+                )
+              )}
 
               <div className="flex flex-wrap gap-2 justify-center mb-4">
                 {eventInfo.checkin_location_enabled && <EventTypeBadge type="geo" />}
@@ -505,7 +553,7 @@ const EventCheckinPage: React.FC = () => {
               <p className="text-xs text-gray-400 mt-4">
                 Please enter the name associated with your club membership.
               </p>
-            </>
+            </motion.div>
           )
         ) : (
            <p className="text-gray-500">Could not load event information.</p>

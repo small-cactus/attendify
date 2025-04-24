@@ -49,6 +49,44 @@ interface Member {
   created_at: string;
 }
 
+// Shared transition for tab content (blur lingers longer than fade)
+const TAB_TRANSITION = {
+  opacity: { duration: 0.16, ease: [0.4, 0, 0.2, 1] },
+  filter: { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
+};
+
+// Animation variants for tab content
+const tabVariants = {
+  hidden: {
+    opacity: 0,
+    filter: 'blur(16px)',
+    scale: 0.97,
+    y: -20
+  },
+  visible: {
+    opacity: 1,
+    filter: 'blur(0px)',
+    scale: 1,
+    y: 0,
+    transition: {
+      ...TAB_TRANSITION,
+      type: 'spring',
+      damping: 25,
+      stiffness: 300
+    }
+  },
+  exit: {
+    opacity: 0,
+    filter: 'blur(16px)',
+    scale: 0.97,
+    y: -20,
+    transition: {
+      ...TAB_TRANSITION,
+      duration: 0.2
+    }
+  }
+};
+
 const ClubDetail: React.FC = () => {
   const { clubId } = useParams<{ clubId: string }>();
   const { user, loading: authLoading } = useAuth();
@@ -245,7 +283,13 @@ const ClubDetail: React.FC = () => {
       // Refetch events to update the list
       const { data: refetchData, error: refetchError } = await supabase
         .from('events')
-        .select('id, club_id, name, event_date, invite_code, created_at, checkin_location_enabled, checkin_code_enabled, checkin_only_during_event')
+        // Select ALL fields needed for display and editing, including the time fields
+        .select(`
+          id, club_id, name, event_date, invite_code, created_at,
+          checkin_location_enabled, checkin_code_enabled, checkin_only_during_event,
+          location_lat, location_lng, location_radius_meters,
+          recurrence, recurrence_until, event_start_time, event_end_time 
+        `)
         .eq('club_id', clubId)
         .order('event_date', { ascending: false });
 
@@ -492,10 +536,11 @@ const ClubDetail: React.FC = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentTab} // Trigger animation on tab change
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            variants={tabVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            layout
           >
             {currentTab === 'events' && (
               <div>
@@ -539,12 +584,85 @@ const ClubDetail: React.FC = () => {
                                   {event.name}
                                 </h3>
                                 <div className="mt-1 text-sm text-gray-600">
-                                  {new Date(event.event_date).toLocaleString('en-US', { 
-                                    weekday: 'long',
-                                    year: 'numeric',
-                                    hour: 'numeric',
-                                    minute: '2-digit'
-                                  })}
+                                  {(() => {
+                                    console.log(`Raw event_date: "${event.event_date}", Raw event_start_time: "${event.event_start_time}"`);
+                                    
+                                    // Emergency fallback display to ensure we see the actual data
+                                    let rawDisplay = `Date: ${event.event_date || 'None'}`;
+                                    rawDisplay += event.event_start_time ? ` Time: ${event.event_start_time}` : '';
+                                    
+                                    // Try to parse and format correctly
+                                    try {
+                                      // YYYY-MM-DD format expected
+                                      const dateParts = event.event_date.split('-');
+                                      if (dateParts.length !== 3) {
+                                        console.error("Invalid date format:", event.event_date);
+                                        return rawDisplay; // Show raw values in UI if format is wrong
+                                      }
+                                      
+                                      // Parse date parts as integers
+                                      const year = parseInt(dateParts[0]);
+                                      const month = parseInt(dateParts[1]) - 1; // JS months are 0-indexed
+                                      const day = parseInt(dateParts[2]);
+                                      
+                                      console.log(`Parsed date components - Year: ${year}, Month: ${month} (0-indexed), Day: ${day}`);
+                                      
+                                      // Create date using local date constructor (avoids timezone issues)
+                                      const eventDate = new Date(year, month, day);
+                                      console.log(`Created Date object:`, eventDate.toString());
+                                      
+                                      // Format options for display
+                                      const formatOptions: Intl.DateTimeFormatOptions = {
+                                        weekday: 'long', 
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                      };
+                                      
+                                      // Add time if available
+                                      if (event.event_start_time) {
+                                        formatOptions.hour = 'numeric';
+                                        formatOptions.minute = '2-digit';
+                                        
+                                        // Handle both formats: "HH:MM:SS" and ISO "YYYY-MM-DDTHH:MM:SS"
+                                        try {
+                                          let timeString = event.event_start_time;
+                                          
+                                          // If it contains a 'T' (ISO format), extract just the time part
+                                          if (timeString.includes('T')) {
+                                            console.log('ISO format detected, extracting time portion');
+                                            timeString = timeString.split('T')[1];
+                                          }
+                                          
+                                          console.log('Extracted time string:', timeString);
+                                          
+                                          // Now parse the time part
+                                          const timeParts = timeString.split(':');
+                                          if (timeParts.length >= 2) {
+                                            const hours = parseInt(timeParts[0]);
+                                            const minutes = parseInt(timeParts[1]);
+                                            
+                                            console.log(`Parsed time - Hours: ${hours}, Minutes: ${minutes}`);
+                                            
+                                            // Set time on our date object
+                                            eventDate.setHours(hours, minutes, 0);
+                                            console.log(`Date with time set:`, eventDate.toString());
+                                          }
+                                        } catch (error) {
+                                          console.error('Error parsing time:', error);
+                                        }
+                                      }
+                                      
+                                      // Format the date for display
+                                      const formattedDate = eventDate.toLocaleString('en-US', formatOptions);
+                                      console.log(`Final formatted date: "${formattedDate}"`);
+                                      
+                                      return formattedDate;
+                                    } catch (error) {
+                                      console.error("Error formatting date:", error);
+                                      return rawDisplay; // Fallback to raw display
+                                    }
+                                  })()}
                                 </div>
                                 {/* Add Event Badges Here */}
                                 <div className="flex flex-wrap gap-2 mt-2">
@@ -585,6 +703,17 @@ const ClubDetail: React.FC = () => {
                                     title="Delete Event"
                                   >
                                     Delete
+                                  </button>
+                                  {/* Add Edit Button */}
+                                  <button
+                                    onClick={() => {
+                                      setEventToEdit(event);
+                                      setIsCreateEventModalOpen(true);
+                                    }}
+                                    className="text-xs text-center px-2 py-1 text-gray-600 bg-gray-100 font-medium rounded-md hover:bg-gray-200 transition-all whitespace-nowrap"
+                                    title="Edit Event"
+                                  >
+                                    Edit
                                   </button>
                                 </div>
                               </div>

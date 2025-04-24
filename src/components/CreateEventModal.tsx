@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CustomDatePicker, CustomSelect, CustomRadio, CustomCheckbox } from './FormComponents';
+import { CustomSelect, CustomRadio, CustomCheckbox } from './FormComponents';
 import LocationPicker from './LocationPicker';
 import LocationPermissionModal from './LocationPermissionModal';
+import CustomDateTimePickerModal from './CustomDateTimePickerModal';
 // import { supabase } from '../utils/supabaseClient'; // Import supabase if needed for unique code check
 import { IonIcon } from '@ionic/react'; // Import IonIcon
 import {
@@ -36,6 +37,24 @@ interface Event {
   event_end_time?: string | null;
 }
 
+// Helper function to format Date to YYYY-MM-DD (local)
+function formatDateToLocalYYYYMMDD(date: Date | null): string | null {
+  if (!date) return null;
+  // Use local date components to avoid timezone shifts
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper function to format Date to HH:mm:ss (local)
+function formatTimeToLocalHHMMSS(date: Date | null): string | null {
+  if (!date) return null;
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+}
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -91,11 +110,67 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [isRequestingLocation, setIsRequestingLocation] = useState(false);
   const [hasLocationPermissionBeenGranted, setHasLocationPermissionBeenGranted] = useState(false);
 
+  // Add these state variables inside the CreateEventModal component
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isRecurrenceEndPickerOpen, setIsRecurrenceEndPickerOpen] = useState(false);
+
+  // Add these refs inside the CreateEventModal component
+  const dateButtonRef = useRef<HTMLButtonElement>(null);
+  const recurrenceEndButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Add refs to store selected times
+  const selectedStartTimeRef = useRef<Date | null>(null);
+  const selectedEndTimeRef = useRef<Date | null>(null);
+
   // --- Effect to pre-fill form when editing ---
   useEffect(() => {
     if (isEditing && eventToEdit) {
       setEventName(eventToEdit.name);
-      setEventDateObj(new Date(eventToEdit.event_date)); // Convert string date back to Date object
+      
+      // Combine date and time for accurate Date objects
+      const baseDateStr = eventToEdit.event_date; // Should be YYYY-MM-DD
+      const startTimeStr = eventToEdit.event_start_time; // Should be HH:mm:ss or null
+      const endTimeStr = eventToEdit.event_end_time; // Should be HH:mm:ss or null
+
+      // Set the main event date object (date + time if available)
+      if (baseDateStr && startTimeStr) {
+        if (startTimeStr.includes('T')) {
+          setEventDateObj(new Date(startTimeStr));
+        } else {
+          setEventDateObj(new Date(baseDateStr + 'T' + startTimeStr));
+        }
+      } else if (baseDateStr) {
+        // Fallback: use user's current time with the event date
+        const now = new Date();
+        const fallback = new Date(baseDateStr + 'T00:00:00');
+        fallback.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+        setEventDateObj(fallback);
+      }
+
+      // Set start time object
+      if (startTimeStr) {
+        try {
+          setEventStartTimeObj(new Date(`${baseDateStr}T${startTimeStr}`));
+        } catch (e) {
+          console.error("Error parsing start time:", e);
+          setEventStartTimeObj(null); // Handle potential parsing errors
+        }
+      } else {
+        setEventStartTimeObj(null);
+      }
+
+      // Set end time object
+      if (endTimeStr) {
+         try {
+           setEventEndTimeObj(new Date(`${baseDateStr}T${endTimeStr}`));
+         } catch (e) {
+          console.error("Error parsing end time:", e);
+          setEventEndTimeObj(null); // Handle potential parsing errors
+         }
+      } else {
+        setEventEndTimeObj(null);
+      }
+      
       setCheckinMethod(eventToEdit.checkin_code_enabled ? 'code' : 'qr');
       setCheckinLocationEnabled(!!eventToEdit.checkin_location_enabled);
       setLocationLat(eventToEdit.location_lat?.toString() || '');
@@ -105,15 +180,32 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
       setRecurrenceUntilObj(eventToEdit.recurrence_until ? new Date(eventToEdit.recurrence_until) : null);
       setRepeatForever(eventToEdit.recurrence !== 'none' && eventToEdit.recurrence_until === null);
       setCheckinOnlyDuringEvent(!!eventToEdit.checkin_only_during_event);
-      setEventStartTimeObj(eventToEdit.event_start_time ? new Date(eventToEdit.event_start_time) : null);
-      setEventEndTimeObj(eventToEdit.event_end_time ? new Date(eventToEdit.event_end_time) : null);
-
-      // Note: We don't pre-fill 'hasLocationPermissionBeenGranted'
-      // as permission might have changed or needs re-confirmation.
+      setHasLocationPermissionBeenGranted(false); // Reset permission grant status
     }
-    // No need to reset here, the effect below handles resetting when isOpen changes to false.
-  }, [isEditing, eventToEdit, isOpen]); // Add isOpen to re-run when modal opens with new data
+  }, [isEditing, eventToEdit]);
 
+  // --- Reset form state when modal closes ---
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset all form fields when modal closes (for both create and edit)
+      setEventName('');
+      setEventDateObj(null);
+      setEventError(null);
+      setCheckinMethod('qr');
+      setCheckinLocationEnabled(false);
+      setLocationLat('');
+      setLocationLng('');
+      setLocationRadius('');
+      setRecurrence('none');
+      setRecurrenceUntilObj(null);
+      setRepeatForever(false);
+      setCheckinOnlyDuringEvent(false);
+      setEventStartTimeObj(null);
+      setEventEndTimeObj(null);
+      setEventLoading(false); // Ensure loading state is reset
+      setHasLocationPermissionBeenGranted(false); // Reset permission grant status
+    }
+  }, [isOpen]);
 
   // --- Effect to infer recurrence from event name ---
   useEffect(() => {
@@ -139,48 +231,6 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
         previouslyInferredRecurrenceRef.current = newlyInferredRecurrence;
     }
   }, [eventName, recurrence, isEditing, eventToEdit?.recurrence]);
-
-  // --- Reset form state when modal opens for CREATE or closes ---
-  useEffect(() => {
-    if (!isOpen) {
-      // Reset all form fields when modal closes (for both create and edit)
-      setEventName('');
-      setEventDateObj(null);
-      setEventError(null);
-      setCheckinMethod('qr');
-      setCheckinLocationEnabled(false);
-      setLocationLat('');
-      setLocationLng('');
-      setLocationRadius('');
-      setRecurrence('none');
-      setRecurrenceUntilObj(null);
-      setRepeatForever(false);
-      setCheckinOnlyDuringEvent(false);
-      setEventStartTimeObj(null);
-      setEventEndTimeObj(null);
-      setEventLoading(false); // Ensure loading state is reset
-      setHasLocationPermissionBeenGranted(false); // Reset permission grant status
-    } else if (isOpen && !isEditing) {
-       // Explicitly reset only when opening for CREATE
-       // This prevents edit state from being cleared if modal re-renders while open
-       setEventName('');
-       setEventDateObj(null);
-       setEventError(null);
-       setCheckinMethod('qr');
-       setCheckinLocationEnabled(false);
-       setLocationLat('');
-       setLocationLng('');
-       setLocationRadius('');
-       setRecurrence('none');
-       setRecurrenceUntilObj(null);
-       setRepeatForever(false);
-       setCheckinOnlyDuringEvent(false);
-       setEventStartTimeObj(null);
-       setEventEndTimeObj(null);
-       setEventLoading(false);
-       setHasLocationPermissionBeenGranted(false);
-    }
-  }, [isOpen, isEditing]); // Add isEditing
 
   // --- Handlers ---
 
@@ -215,30 +265,62 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
        console.warn("Location details might be missing for enabled location restriction.");
     }
 
+    // Create helper function for direct time format
+    const formatTimeToSQLString = (dateObj: Date | null): string | null => {
+      if (!dateObj) return null;
+      
+      // Format using the local time components to avoid timezone issues
+      // YYYY-MM-DD HH:MM:SS format
+      const date = formatDateToLocalYYYYMMDD(dateObj);
+      const time = formatTimeToLocalHHMMSS(dateObj);
+      
+      return date + ' ' + time;
+    };
+
     // Construct the data payload
     const eventDataPayload: Partial<Event> = {
         name: eventName,
-        event_date: eventDateObj.toISOString(), // Send full ISO string, let DB handle date part if needed
-        // invite_code should NOT be updated during edit, remove from here
+        event_date: formatDateToLocalYYYYMMDD(eventDateObj)!,
         checkin_location_enabled: checkinLocationEnabled,
         checkin_qr_enabled: checkinMethod === 'qr',
         checkin_code_enabled: checkinMethod === 'code',
-        // checkin_code: null, // Code management might be separate
         location_lat: checkinLocationEnabled ? (locationLat ? parseFloat(locationLat) : null) : null,
         location_lng: checkinLocationEnabled ? (locationLng ? parseFloat(locationLng) : null) : null,
         location_radius_meters: checkinLocationEnabled ? (locationRadius ? parseInt(locationRadius) : null) : null,
         recurrence,
-        recurrence_until: recurrence !== 'none' ? (repeatForever ? null : recurrenceUntilObj?.toISOString()) : null, // Send full ISO string
-        event_start_time: checkinOnlyDuringEvent ? eventStartTimeObj?.toISOString() : null,
-        event_end_time: checkinOnlyDuringEvent ? eventEndTimeObj?.toISOString() : null,
+        recurrence_until: recurrence !== 'none' ? (repeatForever ? null : formatDateToLocalYYYYMMDD(recurrenceUntilObj)) : null,
+        
+        // Always include the time component from eventDateObj as event_start_time
+        event_start_time: eventDateObj ? formatTimeToSQLString(eventDateObj) : null,
+        
+        // Only include end time if time restriction is enabled
+        event_end_time: checkinOnlyDuringEvent && eventEndTimeObj ? formatTimeToSQLString(eventEndTimeObj) : null,
+        
+        // Set restriction flag only if checkbox is checked
         checkin_only_during_event: checkinOnlyDuringEvent,
-      };
+    };
+
+    // Add VERY explicit logging
+    console.log("SUBMISSION VALUES:", {
+        checkinOnlyDuringEvent,
+        eventStartTimeObj,
+        eventEndTimeObj,
+        event_start_time: eventDataPayload.event_start_time,
+        event_end_time: eventDataPayload.event_end_time
+    });
 
     // Add invite_code only when creating
     if (!isEditing) {
       eventDataPayload.invite_code = generateAccessCode(8);
     }
 
+    console.log('FINAL VERIFICATION BEFORE SUBMIT:');
+    console.log('eventDateObj =', eventDateObj?.toString());
+    console.log('eventEndTimeObj =', eventEndTimeObj?.toString());
+    console.log('checkinOnlyDuringEvent =', checkinOnlyDuringEvent);
+    console.log('Formatted date =', formatDateToLocalYYYYMMDD(eventDateObj));
+    console.log('Formatted start time =', formatTimeToSQLString(eventDateObj));
+    console.log('Formatted end time =', formatTimeToSQLString(eventEndTimeObj));
 
     try {
       await onSubmit(eventDataPayload); // Pass the constructed payload
@@ -300,6 +382,29 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     }
   };
 
+  // Update handleCheckTimeRestriction to ALWAYS set times
+  const handleCheckTimeRestriction = (checked: boolean) => {
+    setCheckinOnlyDuringEvent(checked);
+    
+    // If enabling time restriction, ALWAYS set times
+    if (checked) {
+      console.log("Time restriction enabled, FORCING default times");
+      
+      // Set start time to current time
+      const now = new Date();
+      const startTime = new Date(now);
+      console.log("FORCING default start time:", startTime);
+      setEventStartTimeObj(startTime);
+      selectedStartTimeRef.current = startTime;
+      
+      // Set end time to current time + 2 hours
+      const endTime = new Date(now);
+      endTime.setHours(endTime.getHours() + 2);
+      console.log("FORCING default end time:", endTime);
+      setEventEndTimeObj(endTime);
+      selectedEndTimeRef.current = endTime;
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -308,14 +413,19 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.16, ease: 'easeInOut' }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4"
           onClick={onClose} // Close on backdrop click
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            initial={{ scale: 0.9, opacity: 0, filter: 'blur(16px)' }}
+            animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+            exit={{ scale: 0.9, opacity: 0, filter: 'blur(16px)' }}
+            transition={{
+              scale: { type: 'spring', stiffness: 300, damping: 30 },
+              opacity: { duration: 0.16, ease: 'easeInOut' },
+              filter: { duration: 0.28, ease: 'easeInOut' }
+            }}
             className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative"
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
           >
@@ -353,14 +463,38 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 {/* Event Date */}
                 <div>
                     <label htmlFor="modalEventDate" className="block text-xs font-medium text-gray-600 mb-1">Event Date</label>
-                    <CustomDatePicker
-                    selected={eventDateObj}
-                    onChange={(date) => setEventDateObj(date)}
-                    placeholderText="Select event date"
-                    minDate={new Date()} // Keep minDate for create, might remove/adjust for edit
-                    isClearable
-                    disabled={eventLoading}
-                    className="w-full" // Ensure CustomDatePicker accepts className or has wrapper
+                    <button
+                        ref={dateButtonRef}
+                        type="button"
+                        onClick={() => setIsDatePickerOpen(true)}
+                        className="w-full px-3 py-2 text-sm text-left border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white hover:bg-gray-50 transition-colors"
+                        disabled={eventLoading}
+                    >
+                        {eventDateObj ? eventDateObj.toLocaleDateString() + ' ' + eventDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select event date and time'}
+                    </button>
+                    <CustomDateTimePickerModal
+                        isOpen={isDatePickerOpen}
+                        onClose={() => setIsDatePickerOpen(false)}
+                        onSelectDateTime={(date) => {
+                            if (date) {
+                                // If a new date is selected but it doesn't have a custom time set (i.e., it's midnight),
+                                // and we had a previous date with a non-midnight time, preserve that time
+                                const isDefaultMidnight = date.getHours() === 0 && date.getMinutes() === 0;
+                                if (isDefaultMidnight && eventDateObj && (eventDateObj.getHours() !== 0 || eventDateObj.getMinutes() !== 0)) {
+                                    // Copy the time from the previous date
+                                    date.setHours(eventDateObj.getHours(), eventDateObj.getMinutes(), eventDateObj.getSeconds());
+                                } else if (isDefaultMidnight && !eventDateObj) {
+                                    // No previous date with time, so use current time
+                                    const now = new Date();
+                                    date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+                                }
+                            }
+                            setEventDateObj(date);
+                        }}
+                        initialDate={eventDateObj || null}
+                        mode="datetime"
+                        minDate={new Date()} // Only allow future dates
+                        anchorEl={dateButtonRef.current}
                     />
                 </div>
                 {/* Check-in Method */}
@@ -407,25 +541,35 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
                                 initial={{ opacity: 0, height: 0, marginTop: 0 }}
                                 animate={{ opacity: 1, height: 'auto', marginTop: '0.5rem' }}
                                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="overflow-hidden" // Prevents content spill during animation
+                                className="overflow-hidden"
                             >
                                 <label className="block text-xs font-medium text-gray-600 mb-1">Repeat until</label>
-                                <CustomDatePicker
-                                    selected={repeatForever ? null : recurrenceUntilObj}
-                                    onChange={(date) => setRecurrenceUntilObj(date)}
-                                    minDate={eventDateObj || undefined} // Use minDate based on event date
-                                    placeholderText="Select end date"
-                                    disabled={eventLoading || repeatForever}
-                                    isClearable
-                                    className="w-full"
+                                <button
+                                    ref={recurrenceEndButtonRef}
+                                    type="button"
+                                    onClick={() => !repeatForever && setIsRecurrenceEndPickerOpen(true)}
+                                    className={`w-full px-3 py-2 text-sm text-left border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white hover:bg-gray-50 transition-colors ${repeatForever ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={repeatForever || eventLoading}
+                                >
+                                    {recurrenceUntilObj ? recurrenceUntilObj.toLocaleDateString() : 'Select end date'}
+                                </button>
+                                <CustomDateTimePickerModal
+                                    isOpen={isRecurrenceEndPickerOpen}
+                                    onClose={() => setIsRecurrenceEndPickerOpen(false)}
+                                    onSelectDateTime={(date) => {
+                                        setRecurrenceUntilObj(date);
+                                    }}
+                                    initialDate={recurrenceUntilObj}
+                                    mode="date"
+                                    minDate={eventDateObj || undefined}
+                                    anchorEl={recurrenceEndButtonRef.current}
                                 />
                                 <div className="mt-2">
                                     <CustomCheckbox
                                         checked={repeatForever}
                                         onChange={checked => {
                                             setRepeatForever(checked);
-                                            if (checked) setRecurrenceUntilObj(null); // Clear specific date if repeating forever
+                                            if (checked) setRecurrenceUntilObj(null);
                                         }}
                                         label="Repeat forever"
                                         disabled={eventLoading}
@@ -445,7 +589,10 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     {/* Time Restriction */}
                     <CustomCheckbox
                         checked={checkinOnlyDuringEvent}
-                        onChange={setCheckinOnlyDuringEvent}
+                        onChange={(checked) => {
+                            console.log("Checkbox clicked, new state:", checked);
+                            handleCheckTimeRestriction(checked);
+                        }}
                         label={
                           <span className="flex items-center gap-1">
                             <IonIcon icon={timeOutline} className="text-sm" />
@@ -462,33 +609,46 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         initial={{ opacity: 0, height: 0, marginTop: 0 }}
                         animate={{ opacity: 1, height: 'auto', marginTop: '0.5rem' }}
                         exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden ml-6 space-y-2 pb-2" // Indent time pickers
+                        className="overflow-hidden ml-6 space-y-2 pb-2"
                        >
                          <div>
-                           <label className="block text-xs font-medium text-gray-600 mb-1">Start Time</label>
-                           <CustomDatePicker
-                             selected={eventStartTimeObj}
-                             onChange={(date) => setEventStartTimeObj(date)}
-                             showTimeSelect showTimeSelectOnly timeIntervals={15}
-                             timeCaption="Time" dateFormat="h:mm aa"
-                             placeholderText="Select start time"
-                             disabled={eventLoading} className="w-full"
-                           />
+                           <label className="block text-xs font-medium text-gray-600 mb-1">Start Time (from event date)</label>
+                           <div className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-50 rounded-md text-gray-500">
+                             {eventDateObj ? eventDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Set in event date'}
+                           </div>
                          </div>
                          <div>
-                           <label className="block text-xs font-medium text-gray-600 mb-1">End Time</label>
-                           <CustomDatePicker
-                             selected={eventEndTimeObj}
-                             onChange={(date) => setEventEndTimeObj(date)}
-                             showTimeSelect showTimeSelectOnly timeIntervals={15}
-                             timeCaption="Time" dateFormat="h:mm aa"
-                             placeholderText="Select end time"
-                             // Ensure minTime is set based on startTimeObj if available
-                             // Check react-datepicker documentation for the correct prop name if 'minTime' is not right
-                             // minTime={eventStartTimeObj ? new Date(eventStartTimeObj) : undefined}
-                             // filterTime={(time: Date) => eventStartTimeObj ? time.getTime() > eventStartTimeObj.getTime() : true} // Basic filter
-                             disabled={eventLoading} className="w-full"
+                           <label className="block text-xs font-medium text-gray-600 mb-1">End Time for Check-in Window</label>
+                           <input
+                             type="time"
+                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white"
+                             value={eventEndTimeObj ? 
+                               `${eventEndTimeObj.getHours().toString().padStart(2, '0')}:${eventEndTimeObj.getMinutes().toString().padStart(2, '0')}` 
+                               : '00:00'} // Default to 00:00 if null
+                             onChange={(e) => {
+                               if (e.target.value) {
+                                 console.log('Manual time input value:', e.target.value);
+                                 const [hours, minutes] = e.target.value.split(':').map(Number);
+                                 
+                                 // Create a new date object based on the event date or today
+                                 const date = new Date();
+                                 if (eventDateObj) {
+                                   // Preserve the date part from eventDateObj
+                                   date.setFullYear(eventDateObj.getFullYear(), eventDateObj.getMonth(), eventDateObj.getDate());
+                                 }
+                                 date.setHours(hours, minutes, 0, 0);
+                                 
+                                 console.log('Setting end time directly to:', date.toString());
+                                 setEventEndTimeObj(date);
+                                 selectedEndTimeRef.current = date;
+                                 
+                                 // Force a re-render to ensure the UI updates
+                                 setTimeout(() => {
+                                   console.log('After set, eventEndTimeObj is:', eventEndTimeObj);
+                                 }, 100);
+                               }
+                             }}
+                             disabled={eventLoading}
                            />
                          </div>
                        </motion.div>
@@ -514,7 +674,6 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
                              initial={{ opacity: 0, height: 0, marginTop: 0 }}
                              animate={{ opacity: 1, height: 'auto', marginTop: '0.5rem' }}
                              exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                             transition={{ duration: 0.2 }}
                              className="overflow-hidden ml-6 border border-gray-100 rounded-md p-3 bg-gray-50" // Indent map
                         >
                         <LocationPicker
