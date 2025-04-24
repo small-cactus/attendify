@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
+import { motion } from 'framer-motion';
 
 // Add gradient animation keyframes
 const gradientAnimation = `
@@ -17,6 +18,29 @@ const FeatureIcon = ({ children, style }: { children: React.ReactNode, style: Re
   </div>
 );
 
+// Animation config for staggered entrance
+const STAGGER_CHILDREN = 0.80;
+const EASE_BEZIER = [0.4, 0, 0.2, 1];
+
+const welcomeVariants = {
+  hidden: {
+    opacity: 0,
+    filter: 'blur(16px)',
+  },
+  visible: {
+    opacity: 1,
+    filter: 'blur(0px)',
+    transition: {
+      opacity: { duration: 1.2, ease: EASE_BEZIER },
+      filter: { duration: 1.6, ease: EASE_BEZIER },
+      type: 'spring',
+      damping: 40,
+      stiffness: 80,
+      staggerChildren: STAGGER_CHILDREN,
+    },
+  },
+};
+
 const Welcome: React.FC = () => {
   const navigate = useNavigate();
   const [isFaqOpen, setIsFaqOpen] = useState(false);
@@ -28,8 +52,13 @@ const Welcome: React.FC = () => {
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
       }} />
       
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+      <motion.div
+        className="relative z-10 w-full max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8"
+        variants={welcomeVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div className="text-center mb-16" variants={welcomeVariants}>
           <div className="mb-2">
             <h1 className="mb-1 flex justify-center items-center">
               <Logo 
@@ -60,10 +89,10 @@ const Welcome: React.FC = () => {
               <div className="absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Check-in Methods Section */}
-        <section className="mb-20 py-16 bg-gradient-to-b from-white to-blue-50 rounded-3xl border border-gray-200">
+        <motion.div className="mb-20 py-16 bg-gradient-to-b from-white to-blue-50 rounded-3xl border border-gray-200" variants={welcomeVariants}>
           <h3 className="text-3xl font-bold text-center mb-4">Multiple Ways to Check In</h3>
           <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">Choose from various check-in methods to best suit your organization's needs</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-8">
@@ -118,10 +147,10 @@ const Welcome: React.FC = () => {
               <p className="text-gray-600">Use simple codes for quick access to events</p>
             </div>
           </div>
-        </section>
+        </motion.div>
 
         {/* Club Joining Methods Section */}
-        <section className="mb-20 py-16 bg-gradient-to-b from-white to-emerald-50 rounded-3xl border border-gray-200">
+        <motion.div className="mb-20 py-16 bg-gradient-to-b from-white to-emerald-50 rounded-3xl border border-gray-200" variants={welcomeVariants}>
           <h3 className="text-3xl font-bold text-center mb-4">Easy Ways to Join Clubs</h3>
           <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">Simple and quick methods for members to join your organization</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-8">
@@ -155,10 +184,10 @@ const Welcome: React.FC = () => {
               <p className="text-gray-600">Enter a simple code to join</p>
             </div>
           </div>
-        </section>
+        </motion.div>
 
         {/* Management Features Section */}
-        <section className="mb-20 py-16 bg-gradient-to-b from-white to-purple-50 rounded-3xl border border-gray-200">
+        <motion.div className="mb-20 py-16 bg-gradient-to-b from-white to-purple-50 rounded-3xl border border-gray-200" variants={welcomeVariants}>
           <h3 className="text-3xl font-bold text-center mb-4">Powerful Management Features</h3>
           <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">Everything you need to run your organization efficiently</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-8">
@@ -192,10 +221,10 @@ const Welcome: React.FC = () => {
               <p className="text-gray-600">Export attendance data to CSV for analysis</p>
             </div>
           </div>
-        </section>
+        </motion.div>
 
         {/* Free Forever Banner */}
-        <section className="mb-20">
+        <motion.div className="mb-20" variants={welcomeVariants}>
           <div className="bg-white rounded-2xl p-8 md:p-12 text-center border border-gray-200">
             <h3 className="text-[clamp(2.5rem,8vw,4.5rem)] font-bold mb-4 bg-[radial-gradient(circle_at_top_left,#FF0080,#7928CA,#FF4D4D,#F4D03F,#52E5E7)] text-transparent bg-clip-text bg-[length:200%_200%] animate-[gradient_8s_ease-in-out_infinite]">
               Completely Free Forever
@@ -220,10 +249,10 @@ const Welcome: React.FC = () => {
               </div>
             </div>
           </div>
-        </section>
+        </motion.div>
 
         {/* FAQ Section */}
-        <section className="mb-20 max-w-3xl mx-auto">
+        <motion.div className="mb-20 max-w-3xl mx-auto" variants={welcomeVariants}>
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             <button
               onClick={() => setIsFaqOpen(!isFaqOpen)}
@@ -250,10 +279,10 @@ const Welcome: React.FC = () => {
               <p className="text-gray-600">i make no money from this project, I am broke</p>
             </div>
           </div>
-        </section>
+        </motion.div>
 
         {/* Footer */}
-        <div className="text-center">
+        <motion.div className="text-center" variants={welcomeVariants}>
           <div className="flex items-center justify-center space-x-6 text-sm">
             <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
               About Us
@@ -270,8 +299,8 @@ const Welcome: React.FC = () => {
           <p className="mt-6 text-sm text-gray-500">
             © {new Date().getFullYear()} Attendify. All rights reserved.
           </p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
