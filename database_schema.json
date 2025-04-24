@@ -1,0 +1,155 @@
+| table_name                 | index_name                                           | column_names                      | is_unique | is_primary |
+| -------------------------- | ---------------------------------------------------- | --------------------------------- | --------- | ---------- |
+| attendance                 | attendance_event_id_member_id_key                    | event_id, member_id               | true      | false      |
+| attendance                 | attendance_pkey                                      | id                                | true      | true       |
+| audit_log_entries          | audit_log_entries_pkey                               | id                                | true      | true       |
+| audit_log_entries          | audit_logs_instance_id_idx                           | instance_id                       | false     | false      |
+| buckets                    | bname                                                | name                              | true      | false      |
+| buckets                    | buckets_pkey                                         | id                                | true      | true       |
+| club_owners                | club_owners_pkey                                     | club_id, user_id                  | true      | true       |
+| club_settings              | club_settings_pkey                                   | club_id                           | true      | true       |
+| clubs                      | clubs_access_code_key                                | access_code                       | true      | false      |
+| clubs                      | clubs_pkey                                           | id                                | true      | true       |
+| events                     | events_invite_code_key                               | invite_code                       | true      | false      |
+| events                     | events_pkey                                          | id                                | true      | true       |
+| flow_state                 | flow_state_created_at_idx                            | created_at                        | false     | false      |
+| flow_state                 | flow_state_pkey                                      | id                                | true      | true       |
+| flow_state                 | idx_auth_code                                        | auth_code                         | false     | false      |
+| flow_state                 | idx_user_id_auth_method                              | user_id, authentication_method    | false     | false      |
+| identities                 | identities_email_idx                                 | email                             | false     | false      |
+| identities                 | identities_pkey                                      | id                                | true      | true       |
+| identities                 | identities_provider_id_provider_unique               | provider_id, provider             | true      | false      |
+| identities                 | identities_user_id_idx                               | user_id                           | false     | false      |
+| instances                  | instances_pkey                                       | id                                | true      | true       |
+| members                    | members_club_id_name_key                             | club_id, name                     | true      | false      |
+| members                    | members_club_id_name_unique                          | club_id, name                     | true      | false      |
+| members                    | members_member_uuid_unique                           | member_uuid                       | true      | false      |
+| members                    | members_pkey                                         | id                                | true      | true       |
+| messages                   | messages_pkey                                        | id, inserted_at                   | true      | true       |
+| mfa_amr_claims             | amr_id_pk                                            | id                                | true      | true       |
+| mfa_amr_claims             | mfa_amr_claims_session_id_authentication_method_pkey | session_id, authentication_method | true      | false      |
+| mfa_challenges             | mfa_challenge_created_at_idx                         | created_at                        | false     | false      |
+| mfa_challenges             | mfa_challenges_pkey                                  | id                                | true      | true       |
+| mfa_factors                | factor_id_created_at_idx                             | user_id, created_at               | false     | false      |
+| mfa_factors                | mfa_factors_last_challenged_at_key                   | last_challenged_at                | true      | false      |
+| mfa_factors                | mfa_factors_pkey                                     | id                                | true      | true       |
+| mfa_factors                | mfa_factors_user_friendly_name_unique                | friendly_name, user_id            | true      | false      |
+| mfa_factors                | mfa_factors_user_id_idx                              | user_id                           | false     | false      |
+| mfa_factors                | unique_phone_factor_per_user                         | user_id, phone                    | true      | false      |
+| migrations                 | migrations_name_key                                  | name                              | true      | false      |
+| migrations                 | migrations_pkey                                      | id                                | true      | true       |
+| objects                    | bucketid_objname                                     | bucket_id, name                   | true      | false      |
+| objects                    | idx_objects_bucket_id_name                           | bucket_id, name                   | false     | false      |
+| objects                    | name_prefix_search                                   | name                              | false     | false      |
+| objects                    | objects_pkey                                         | id                                | true      | true       |
+| one_time_tokens            | one_time_tokens_pkey                                 | id                                | true      | true       |
+| one_time_tokens            | one_time_tokens_relates_to_hash_idx                  | relates_to                        | false     | false      |
+| one_time_tokens            | one_time_tokens_token_hash_hash_idx                  | token_hash                        | false     | false      |
+| one_time_tokens            | one_time_tokens_user_id_token_type_key               | user_id, token_type               | true      | false      |
+| pg_toast_1213              | pg_toast_1213_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_1247              | pg_toast_1247_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_1255              | pg_toast_1255_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_1260              | pg_toast_1260_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_1262              | pg_toast_1262_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_13392             | pg_toast_13392_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_13397             | pg_toast_13397_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_13402             | pg_toast_13402_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_13407             | pg_toast_13407_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_1417              | pg_toast_1417_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_1418              | pg_toast_1418_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16489             | pg_toast_16489_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16501             | pg_toast_16501_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16512             | pg_toast_16512_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16519             | pg_toast_16519_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16540             | pg_toast_16540_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16555             | pg_toast_16555_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16650             | pg_toast_16650_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16704             | pg_toast_16704_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16734             | pg_toast_16734_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16769             | pg_toast_16769_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16782             | pg_toast_16782_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16794             | pg_toast_16794_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16812             | pg_toast_16812_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16821             | pg_toast_16821_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16836             | pg_toast_16836_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16854             | pg_toast_16854_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16907             | pg_toast_16907_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_16957             | pg_toast_16957_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_17014             | pg_toast_17014_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_17028             | pg_toast_17028_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_17093             | pg_toast_17093_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_17266             | pg_toast_17266_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_17280             | pg_toast_17280_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_17306             | pg_toast_17306_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_17323             | pg_toast_17323_index                                 | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2328              | pg_toast_2328_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2396              | pg_toast_2396_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2600              | pg_toast_2600_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2604              | pg_toast_2604_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2606              | pg_toast_2606_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2609              | pg_toast_2609_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2612              | pg_toast_2612_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2615              | pg_toast_2615_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2618              | pg_toast_2618_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2619              | pg_toast_2619_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2620              | pg_toast_2620_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_2964              | pg_toast_2964_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3079              | pg_toast_3079_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3118              | pg_toast_3118_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3256              | pg_toast_3256_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3350              | pg_toast_3350_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3381              | pg_toast_3381_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3394              | pg_toast_3394_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3429              | pg_toast_3429_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3456              | pg_toast_3456_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3466              | pg_toast_3466_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3592              | pg_toast_3592_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3596              | pg_toast_3596_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_3600              | pg_toast_3600_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_6000              | pg_toast_6000_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_6100              | pg_toast_6100_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_6106              | pg_toast_6106_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_6243              | pg_toast_6243_index                                  | chunk_id, chunk_seq               | true      | true       |
+| pg_toast_826               | pg_toast_826_index                                   | chunk_id, chunk_seq               | true      | true       |
+| profiles                   | profiles_pkey                                        | id                                | true      | true       |
+| refresh_tokens             | refresh_tokens_instance_id_idx                       | instance_id                       | false     | false      |
+| refresh_tokens             | refresh_tokens_instance_id_user_id_idx               | instance_id, user_id              | false     | false      |
+| refresh_tokens             | refresh_tokens_parent_idx                            | parent                            | false     | false      |
+| refresh_tokens             | refresh_tokens_pkey                                  | id                                | true      | true       |
+| refresh_tokens             | refresh_tokens_session_id_revoked_idx                | session_id, revoked               | false     | false      |
+| refresh_tokens             | refresh_tokens_token_unique                          | token                             | true      | false      |
+| refresh_tokens             | refresh_tokens_updated_at_idx                        | updated_at                        | false     | false      |
+| s3_multipart_uploads       | idx_multipart_uploads_list                           | bucket_id, key, created_at        | false     | false      |
+| s3_multipart_uploads       | s3_multipart_uploads_pkey                            | id                                | true      | true       |
+| s3_multipart_uploads_parts | s3_multipart_uploads_parts_pkey                      | id                                | true      | true       |
+| saml_providers             | saml_providers_entity_id_key                         | entity_id                         | true      | false      |
+| saml_providers             | saml_providers_pkey                                  | id                                | true      | true       |
+| saml_providers             | saml_providers_sso_provider_id_idx                   | sso_provider_id                   | false     | false      |
+| saml_relay_states          | saml_relay_states_created_at_idx                     | created_at                        | false     | false      |
+| saml_relay_states          | saml_relay_states_for_email_idx                      | for_email                         | false     | false      |
+| saml_relay_states          | saml_relay_states_pkey                               | id                                | true      | true       |
+| saml_relay_states          | saml_relay_states_sso_provider_id_idx                | sso_provider_id                   | false     | false      |
+| schema_migrations          | schema_migrations_pkey                               | version, version                  | true      | true       |
+| secrets                    | secrets_name_idx                                     | name                              | true      | false      |
+| secrets                    | secrets_pkey                                         | id                                | true      | true       |
+| sessions                   | sessions_not_after_idx                               | not_after                         | false     | false      |
+| sessions                   | sessions_pkey                                        | id                                | true      | true       |
+| sessions                   | sessions_user_id_idx                                 | user_id                           | false     | false      |
+| sessions                   | user_id_created_at_idx                               | user_id, created_at               | false     | false      |
+| sso_domains                | sso_domains_pkey                                     | id                                | true      | true       |
+| sso_domains                | sso_domains_sso_provider_id_idx                      | sso_provider_id                   | false     | false      |
+| sso_providers              | sso_providers_pkey                                   | id                                | true      | true       |
+| subscription               | ix_realtime_subscription_entity                      | entity                            | false     | false      |
+| subscription               | pk_subscription                                      | id                                | true      | true       |
+| subscription               | subscription_subscription_id_entity_filters_key      | subscription_id, entity, filters  | true      | false      |
+| users                      | confirmation_token_idx                               | confirmation_token                | true      | false      |
+| users                      | email_change_token_current_idx                       | email_change_token_current        | true      | false      |
+| users                      | email_change_token_new_idx                           | email_change_token_new            | true      | false      |
+| users                      | reauthentication_token_idx                           | reauthentication_token            | true      | false      |
+| users                      | recovery_token_idx                                   | recovery_token                    | true      | false      |
+| users                      | users_email_partial_key                              | email                             | true      | false      |
+| users                      | users_instance_id_email_idx                          | instance_id                       | false     | false      |
+| users                      | users_instance_id_idx                                | instance_id                       | false     | false      |
+| users                      | users_is_anonymous_idx                               | is_anonymous                      | false     | false      |
+| users                      | users_phone_key                                      | phone                             | true      | false      |
+| users                      | users_pkey                                           | id                                | true      | true       |

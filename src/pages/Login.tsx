@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import Logo from '../components/Logo';
 
 const Login: React.FC = () => {
   const { signIn, signUp, user, loading } = useAuth();
@@ -48,6 +49,9 @@ const Login: React.FC = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white">
       <div className="w-full max-w-md px-6">
+        <div className="text-center mb-6">
+          <Logo showText={true} size={45} />
+        </div>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
