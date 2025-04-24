@@ -100,6 +100,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <main className="flex-1 pt-20"> {/* Increased padding-top to account for fixed nav */}
         {children}
       </main>
+      <Analytics />
     </div>
   );
 };
