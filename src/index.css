@@ -67,6 +67,7 @@
     background: linear-gradient(to right, #1d1d1f, #424245);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    line-height: 1.25 !important;
   }
   
   .hero-subtitle {

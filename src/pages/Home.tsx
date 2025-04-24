@@ -14,7 +14,7 @@ const Home: React.FC = () => {
           </div>
           
           <div className="relative max-w-6xl mx-auto px-6 text-center">
-            <h1 className="hero-text mb-8">
+            <h1 className="hero-text mb-8" role="heading">
               Attendance tracking,
               <br />
               reimagined.

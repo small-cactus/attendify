@@ -38,7 +38,7 @@ const Welcome: React.FC = () => {
               />
             </h1>
           </div>
-          <h2 className="text-4xl md:text-5xl lg:text-5xl font-bold mt-24 mb-8 bg-clip-text text-transparent bg-gradient-to-b from-gray-500 to-black">
+          <h2 className="text-4xl md:text-5xl lg:text-5xl font-bold mt-24 mb-8 bg-clip-text text-transparent bg-gradient-to-b from-gray-500 to-black" style={{ lineHeight: 1.25 }}>
             the simplest way to manage your club
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">

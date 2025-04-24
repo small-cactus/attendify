@@ -42,6 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Logo 
               textClassName="text-3xl" 
               imageClassName="w-8 h-8" /* Slightly larger image */ 
+              size={30}
             />
           </Link>
           
