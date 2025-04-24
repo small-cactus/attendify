@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Users, Plus, X, ArrowRight, QrCode, Trash2, Pencil, BarChart3, CalendarDays } from "lucide-react";
 import Logo from '../components/Logo';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 // Animation config for staggered entrance with blur effect (from ClubDetail)
 const TAB_TRANSITION = {
@@ -162,6 +164,9 @@ const stepVariantsWithDelay = {
 };
 
 const Welcome: React.FC = () => {
+  const navigate = useNavigate();
+  const auth = useAuth();
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex justify-center px-4 py-4 sm:py-8">
       <motion.div
@@ -219,7 +224,13 @@ const Welcome: React.FC = () => {
             <motion.button
               className="px-6 sm:px-8 py-3 sm:py-4 bg-black text-white font-medium rounded-lg hover:bg-neutral-900 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
               whileTap={{ scale: 0.98 }}
-              disabled
+              onClick={() => {
+                if (auth.user) {
+                  navigate('/clubs');
+                } else {
+                  navigate('/login');
+                }
+              }}
             >
               create your club
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -228,7 +239,7 @@ const Welcome: React.FC = () => {
             <motion.button
               className="px-6 sm:px-8 py-3 sm:py-4 bg-white text-black font-medium rounded-lg border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 transition-all duration-200 text-sm sm:text-base"
               whileTap={{ scale: 0.98 }}
-              disabled
+              onClick={() => navigate('/join-flow')}
             >
               join existing club
             </motion.button>
@@ -838,7 +849,13 @@ const Welcome: React.FC = () => {
             <motion.button 
               className="px-6 sm:px-8 py-3 sm:py-4 bg-black text-white text-sm sm:text-base font-medium rounded-lg hover:bg-neutral-900 transition-all duration-200 flex items-center justify-center gap-2 mx-auto"
               whileTap={{ scale: 0.98 }}
-              disabled
+              onClick={() => {
+                if (auth.user) {
+                  navigate('/clubs');
+                } else {
+                  navigate('/login');
+                }
+              }}
               >
               attendify your club
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
