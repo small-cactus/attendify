@@ -12,6 +12,40 @@ const TAB_TRANSITION = {
   filter: { duration: 0.28, ease: [0.4, 0, 0.2, 1] }
 };
 
+// Background pattern SVG for plus signs with random positioning
+const plusPatternSvg = `
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plus 1 -->
+  <rect width="2" height="16" x="29" y="22" fill="#EFEFEF" rx="1" ry="1" />
+  <rect width="16" height="2" x="22" y="29" fill="#EFEFEF" rx="1" ry="1" />
+  
+  <!-- Plus 2 -->
+  <rect width="2" height="16" x="89" y="62" fill="#EFEFEF" rx="1" ry="1" />
+  <rect width="16" height="2" x="82" y="69" fill="#EFEFEF" rx="1" ry="1" />
+  
+  <!-- Plus 3 -->
+  <rect width="2" height="16" x="149" y="32" fill="#EFEFEF" rx="1" ry="1" />
+  <rect width="16" height="2" x="142" y="39" fill="#EFEFEF" rx="1" ry="1" />
+  
+  <!-- Plus 4 -->
+  <rect width="2" height="16" x="49" y="132" fill="#EFEFEF" rx="1" ry="1" />
+  <rect width="16" height="2" x="42" y="139" fill="#EFEFEF" rx="1" ry="1" />
+  
+  <!-- Plus 5 -->
+  <rect width="2" height="16" x="169" y="142" fill="#EFEFEF" rx="1" ry="1" />
+  <rect width="16" height="2" x="162" y="149" fill="#EFEFEF" rx="1" ry="1" />
+  
+  <!-- Plus 6 -->
+  <rect width="2" height="16" x="119" y="102" fill="#EFEFEF" rx="1" ry="1" />
+  <rect width="16" height="2" x="112" y="109" fill="#EFEFEF" rx="1" ry="1" />
+</svg>
+`;
+
+// Encode SVG for CSS background usage
+const encodedPlusPattern = encodeURIComponent(plusPatternSvg);
+const plusPatternBackground = `url("data:image/svg+xml,${encodedPlusPattern}")`;
+
+// Animation variants
 const welcomeVariants = {
   hidden: {
     opacity: 0,
@@ -168,7 +202,10 @@ const Welcome: React.FC = () => {
   const auth = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex justify-center px-4 py-4 sm:py-8">
+    <div 
+      className="min-h-screen bg-[#FAFAFA] flex justify-center px-4 py-4 sm:py-8"
+      style={{ backgroundImage: plusPatternBackground }}
+    >
       <motion.div
         className="w-full max-w-5xl mx-auto py-2 sm:py-6"
         variants={welcomeVariants}
