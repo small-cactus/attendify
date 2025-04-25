@@ -266,14 +266,14 @@ const Welcome: React.FC = () => {
                 }
               }}
             >
-              create your club
+              {auth.user ? 'view your clubs' : 'create your club'}
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </motion.button>
 
             <motion.button
               className="px-6 sm:px-8 py-3 sm:py-4 bg-white text-black font-medium rounded-lg border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 transition-all duration-200 text-sm sm:text-base"
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/join-flow')}
+              onClick={() => navigate('/join')}
             >
               join existing club
             </motion.button>

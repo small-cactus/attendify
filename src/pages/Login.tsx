@@ -138,7 +138,7 @@ const Login: React.FC = () => {
           
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
-              Are you a club member? <a href="/join-flow" className="text-black border-b border-gray-200 hover:border-black transition-all">Join a club here</a>
+              Are you a club member? <a href="/join" className="text-black border-b border-gray-200 hover:border-black transition-all">Join a club here</a>
             </p>
           </div>
         </motion.div>

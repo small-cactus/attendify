@@ -587,7 +587,7 @@ const AttendEvent: React.FC = () => {
                   {/* Add link to join page if error is due to member not found */}
                   {error.includes('not found for') && (
                     <a 
-                       href="/join-flow" // Link to the general join flow
+                       href="/join" // Link to the general join flow
                        className="ml-2 underline text-blue-600 hover:text-blue-800 text-xs"
                      >
                        Join a Club
@@ -598,7 +598,7 @@ const AttendEvent: React.FC = () => {
               
               <div className="mt-6 flex justify-center">
                 <a 
-                  href="/join-flow" 
+                  href="/join" 
                   className="text-sm text-black border-b border-gray-200 hover:border-black transition-all"
                 >
                   Join a club first
@@ -668,7 +668,7 @@ const AttendEvent: React.FC = () => {
                   {/* Add link to join page if error is due to member not found */}
                   {error.includes('not found for') && (
                     <a 
-                       href="/join-flow" // Link to the general join flow
+                       href="/join" // Link to the general join flow
                        className="ml-2 underline text-blue-600 hover:text-blue-800 text-xs"
                      >
                        Join a Club
