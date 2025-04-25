@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Users, Plus, X, ArrowRight, QrCode, Trash2, Pencil, BarChart3, CalendarDays } from "lucide-react";
+import { Users, Plus, X, ArrowRight, QrCode, Trash2, Pencil, BarChart3, CalendarDays, Zap } from "lucide-react";
 import Logo from '../components/Logo';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import CharFadeIn from '../components/CharFadeIn';
 
 // Animation config for staggered entrance with blur effect (from ClubDetail)
 const TAB_TRANSITION = {
@@ -92,60 +93,6 @@ const showcaseHeadlineVariants = {
   },
 };
 
-// Animation for each word in the showcase headline
-const showcaseWordVariants = {
-  hidden: {
-    opacity: 0,
-    y: 24,
-    filter: 'blur(16px)',
-    rotate: -2,
-    scale: 0.98,
-  },
-  visible: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    rotate: 0,
-    scale: 1,
-    transition: {
-      duration: 0.9,
-      ease: [0.22, 1, 0.36, 1],
-      filter: { duration: 0.7, ease: [0.4, 0, 0.2, 1] },
-      y: { duration: 0.7, ease: [0.4, 0, 0.2, 1] },
-      opacity: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
-      scale: { duration: 0.8, ease: [0.4, 0, 0.2, 1] },
-      rotate: { duration: 0.8, ease: [0.4, 0, 0.2, 1] },
-    },
-  },
-};
-
-// Animation for the last word in the showcase headline (longer blur)
-const showcaseLastWordVariants = {
-  hidden: {
-    opacity: 0,
-    y: 24,
-    filter: 'blur(16px)',
-    rotate: -2,
-    scale: 0.98,
-  },
-  visible: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    rotate: 0,
-    scale: 1,
-    transition: {
-      duration: 1.2,
-      ease: [0.22, 1, 0.36, 1],
-      filter: { duration: 1.1, ease: [0.4, 0, 0.2, 1] },
-      y: { duration: 0.9, ease: [0.4, 0, 0.2, 1] },
-      opacity: { duration: 0.7, ease: [0.4, 0, 0.2, 1] },
-      scale: { duration: 1.0, ease: [0.4, 0, 0.2, 1] },
-      rotate: { duration: 1.0, ease: [0.4, 0, 0.2, 1] },
-    },
-  },
-};
-
 const mockupVariants = {
   hidden: {
     opacity: 0,
@@ -197,9 +144,50 @@ const stepVariantsWithDelay = {
   },
 };
 
+// Calculate the delay for CTA buttons to animate directly after subtitle
+const SUBHEADING_TEXT = "no complexity. no learning curve. just results.";
+const SUBHEADING_CHARS = SUBHEADING_TEXT.length;
+const SUBHEADING_SPEED = 1.5; // Must match the speed prop used in CharFadeIn for subtitle
+const CHAR_STAGGER_DELAY = 0.035;
+const CHAR_ANIM_DURATION = 0.7;
+const subtitleAnimTime = (SUBHEADING_CHARS * (CHAR_STAGGER_DELAY / SUBHEADING_SPEED)) + (CHAR_ANIM_DURATION / SUBHEADING_SPEED);
+const BUTTONS_EARLY_BUFFER = -0.3; // Buttons show up 0.3s before subtitle finishes
+const SHOWCASE_LATE_BUFFER = 0.3;  // Showcase words show up 0.3s after buttons
+const buttonVariantsWithDelay = {
+  hidden: {
+    opacity: 0,
+    y: 10,
+    filter: 'blur(8px)',
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1],
+      staggerChildren: 0.1,
+      delay: Math.max(0, subtitleAnimTime + BUTTONS_EARLY_BUFFER),
+      filter: { duration: 0.6, ease: [0.4, 0, 0.2, 1] },
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: 10,
+    filter: 'blur(16px)',
+    transition: {
+      opacity: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
+      y: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
+      filter: { duration: 1.2, ease: [0.4, 0, 0.2, 1] }, // Slow blur on exit
+    },
+  },
+};
+
 const Welcome: React.FC = () => {
   const navigate = useNavigate();
   const auth = useAuth();
+
+  const showcaseWords = "create. manage. attend.";
 
   return (
     <div 
@@ -219,7 +207,7 @@ const Welcome: React.FC = () => {
             variants={welcomeVariants}
           >
             {/* Mobile logo (smaller) */}
-            <div className="block sm:hidden">
+            <div className="block sm:hidden mb-8">
               <Logo 
                 imageClassName="w-8 h-8"
                 textClassName="text-lg"
@@ -238,25 +226,34 @@ const Welcome: React.FC = () => {
           </motion.div>
 
           {/* Main Heading */}
-          <motion.h1 
-            className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4 text-black tracking-tight px-1"
+          <motion.h1
+            className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4 tracking-tight px-1 md:leading-[1.15]"
             variants={welcomeVariants}
+            initial="hidden"
+            animate="visible"
           >
-            club management that just works
+            <CharFadeIn text="club management that just works" speed={1.2} className="mobile-word-wrap" />
           </motion.h1>
 
           {/* Subheading */}
-          <motion.p 
-            className="text-lg sm:text-xl text-neutral-600 mb-6 sm:mb-8 sm:mb-12 px-2"
-            variants={welcomeVariants}
-          >
-            no complexity. no learning curve. just results.
-          </motion.p>
+          <div>
+            <div className="block sm:hidden mb-6 h-8" />
+            <p className="hidden sm:block text-lg sm:text-xl text-neutral-600 mb-6 sm:mb-8 sm:mb-12 px-2 h-14 sm:h-auto">
+              <CharFadeIn 
+                text="no complexity. no learning curve. just results."
+                gradient={false} 
+                speed={1.5}
+              />
+            </p>
+          </div>
 
           {/* CTA Buttons */}
           <motion.div 
             className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 mb-12 sm:mb-16 sm:mb-24 px-1"
-            variants={welcomeVariants}
+            variants={buttonVariantsWithDelay}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
           >
             <motion.button
               className="px-6 sm:px-8 py-3 sm:py-4 bg-black text-white font-medium rounded-lg hover:bg-neutral-900 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
@@ -294,44 +291,54 @@ const Welcome: React.FC = () => {
               variants={showcaseHeadlineVariants}
               initial="hidden"
               animate="visible"
+              style={{ display: 'inline-block' }}
             >
-              <motion.span variants={showcaseWordVariants} style={{ display: 'inline-block', marginRight: 6, marginBottom: 4 }} className="sm:mr-2">create.</motion.span>
-              <motion.span variants={showcaseWordVariants} style={{ display: 'inline-block', marginRight: 6, marginBottom: 4 }} className="sm:mr-2">manage.</motion.span>
-              <motion.span variants={showcaseWordVariants} style={{ display: 'inline-block', marginRight: 6, marginBottom: 4 }} className="sm:mr-2">attend.</motion.span>
-              <motion.span variants={showcaseLastWordVariants} style={{ display: 'inline-block', marginBottom: 4 }} className="text-neutral-400">that's it.</motion.span>
+              {/* Span for animating characters of the first three words */}
+              <motion.span
+                style={{ display: 'inline-block', marginRight: 6, marginBottom: 4 }}
+                className="sm:mr-2"
+                variants={{ hidden: {}, visible: {} }}
+                initial="hidden"
+                animate="visible"
+              >
+                <CharFadeIn
+                  text={showcaseWords}
+                  speed={1.4}
+                  startAfter={subtitleAnimTime + SHOWCASE_LATE_BUFFER}
+                />
+              </motion.span>
+              <span style={{ display: 'inline-block', width: '0.3em' }}></span>
+              <CharFadeIn
+                text={"that's it."}
+                speed={0.8}
+                gradient={false}
+                className="text-neutral-400"
+                startAfter={showcaseWords.length * 0.02 + subtitleAnimTime + SHOWCASE_LATE_BUFFER}
+              />
             </motion.h2>
             
             {/* Step 1: Create a Club */}
             <motion.div className="mb-20 sm:mb-32 px-1" variants={stepVariantsWithDelay}>
               <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
-                <div className="w-full md:w-2/5 text-left">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-black rounded-full flex items-center justify-center mb-3 sm:mb-4 text-white text-2xl sm:text-3xl font-extrabold">1</div>
-                  <h3 className="text-xl sm:text-2xl font-medium mb-3 sm:mb-4">create a club in seconds</h3>
-                  <p className="text-sm sm:text-base text-neutral-600 mb-4 sm:mb-6">enter your club name and you're ready to go. no endless forms. none of it.</p>
+                <div className="w-full md:w-2/5 text-left bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl p-6 shadow-sm">
+                  {/* Combined Step Number and Title */}
+                  <h3 className="text-2xl sm:text-3xl mb-3 sm:mb-4 flex items-baseline gap-2">
+                    <span className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border border-gray-200 font-bold text-xl sm:text-2xl mr-2">1</span>
+                    <span className="text-lg sm:text-xl font-bold">ready, set, go!</span>
+                  </h3>
+                  <p className="text-sm sm:text-base text-neutral-600 mb-4 sm:mb-6">Just a name, and you're live. Forget complicated setups.</p>
                   <ul className="space-y-2 sm:space-y-3">
                     <li className="flex items-center text-xs sm:text-sm text-neutral-700">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-2 sm:mr-3">
-                        <svg className="w-2 h-2 sm:w-3 sm:h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>simple name and description</span>
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 sm:mr-3 flex-shrink-0" />
+                      <span>Zero configuration required</span>
                     </li>
                     <li className="flex items-center text-xs sm:text-sm text-neutral-700">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-2 sm:mr-3">
-                        <svg className="w-2 h-2 sm:w-3 sm:h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>club code generated automatically</span>
+                      <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 sm:mr-3 flex-shrink-0" />
+                      <span>Automatic join code generation</span>
                     </li>
                     <li className="flex items-center text-xs sm:text-sm text-neutral-700">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-2 sm:mr-3">
-                        <svg className="w-2 h-2 sm:w-3 sm:h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>instant setup - it's ready the second you hit create</span>
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 sm:mr-3 flex-shrink-0" />
+                      <span>Ready the moment you hit create</span>
                     </li>
                   </ul>
                 </div>
@@ -432,34 +439,28 @@ const Welcome: React.FC = () => {
             {/* Step 2: Create Events */}
             <motion.div className="mb-20 sm:mb-32 px-1" variants={welcomeVariants}>
               <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-8 md:gap-12">
-                <div className="w-full md:w-2/5 text-left">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-black rounded-full flex items-center justify-center mb-3 sm:mb-4 text-white text-2xl sm:text-3xl font-extrabold">2</div>
-                  <h3 className="text-xl sm:text-2xl font-medium mb-3 sm:mb-4">create events in one click</h3>
-                  <p className="text-sm sm:text-base text-neutral-600 mb-4 sm:mb-6">schedule meetings, set check-in options, and customize everything without complexity.</p>
+                <div className="w-full md:w-2/5 text-left bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl p-6 shadow-sm">
+                  {/* Add Combined Step Number and Title */}
+                  <h3 className="text-2xl sm:text-3xl mb-3 sm:mb-4 flex items-baseline gap-2">
+                    <span className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border border-gray-200 font-bold text-xl sm:text-2xl mr-2">2</span>
+                    <span className="text-lg sm:text-xl font-bold">events in seconds</span>
+                  </h3>
+                  
+                  <p className="text-sm sm:text-base text-neutral-600 mb-4 sm:mb-6">Go from idea to event instantly. Configure powerful check-in methods with a click.</p>
                   <ul className="space-y-2 sm:space-y-3">
                     <li className="flex items-center text-xs sm:text-sm text-neutral-700">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-2 sm:mr-3">
-                        <svg className="w-2 h-2 sm:w-3 sm:h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>QR code check-ins</span>
+                      <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 sm:mr-3 flex-shrink-0" />
+                      <span>Instant QR code generation</span>
                     </li>
                     <li className="flex items-center text-xs sm:text-sm text-neutral-700">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-2 sm:mr-3">
-                        <svg className="w-2 h-2 sm:w-3 sm:h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>location and time restrictions</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 sm:mr-3 flex-shrink-0">
+                        <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.274 1.765 11.842 11.842 0 00.978.572l.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clipRule="evenodd" />
+                      </svg>
+                      <span>Optional location & time restrictions</span>
                     </li>
                     <li className="flex items-center text-xs sm:text-sm text-neutral-700">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-2 sm:mr-3">
-                        <svg className="w-2 h-2 sm:w-3 sm:h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>recurring schedules</span>
+                      <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 sm:mr-3 flex-shrink-0" />
+                      <span>Simple recurring schedules</span>
                     </li>
                   </ul>
                 </div>
@@ -655,34 +656,31 @@ const Welcome: React.FC = () => {
             {/* Step 3: Check-ins */}
             <motion.div className="mb-20 sm:mb-32 px-1" variants={welcomeVariants}>
               <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
-                <div className="w-full md:w-2/5 text-left">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-black rounded-full flex items-center justify-center mb-3 sm:mb-4 text-white text-2xl sm:text-3xl font-extrabold">3</div>
-                  <h3 className="text-xl sm:text-2xl font-medium mb-3 sm:mb-4">track attendance instantly</h3>
-                  <p className="text-sm sm:text-base text-neutral-600 mb-4 sm:mb-6">create events, scan members in, and get detailed stats. all in a few taps.</p>
+                <div className="w-full md:w-2/5 text-left bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl p-6 shadow-sm">
+                  {/* Combined Step Number and Title */}
+                  <h3 className="text-2xl sm:text-3xl mb-3 sm:mb-4 flex items-baseline gap-2">
+                    <span className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border border-gray-200 font-bold text-xl sm:text-2xl mr-2">3</span>
+                    <span className="text-lg sm:text-xl font-bold">frictionless check-in</span>
+                  </h3>
+                  <p className="text-sm sm:text-base text-neutral-600 mb-4 sm:mb-6">Attendees scan, type their name, and they're in. No sign-ups, no friction. Just instant, accurate attendance.</p>
                   <ul className="space-y-2 sm:space-y-3">
                     <li className="flex items-center text-xs sm:text-sm text-neutral-700">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-2 sm:mr-3">
-                        <svg className="w-2 h-2 sm:w-3 sm:h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>check-in via QR code</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 sm:mr-3 flex-shrink-0">
+                        <path d="M3.75 4.5a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V5.25a.75.75 0 00-.75-.75h-1.5ZM3.75 9a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75v-1.5a.75.75 0 00-.75-.75h-1.5ZM3.75 13.5a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75v-1.5a.75.75 0 00-.75-.75h-1.5ZM7.5 4.5a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V5.25a.75.75 0 00-.75-.75h-1.5ZM7.5 9a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75v-1.5a.75.75 0 00-.75-.75h-1.5Zm.75 4.5a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v1.5a.75.75 0 01-.75.75h-1.5a.75.75 0 01-.75-.75v-1.5Zm3.75-9a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V5.25a.75.75 0 00-.75-.75h-1.5ZM12 9a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75v-1.5a.75.75 0 00-.75-.75h-1.5Zm.75 4.5a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v1.5a.75.75 0 01-.75.75h-1.5a.75.75 0 01-.75-.75v-1.5Z" />
+                        <path d="M16.5 4.5a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h.75a.75.75 0 00.75-.75V5.25a.75.75 0 00-.75-.75h-.75ZM15.75 9a.75.75 0 00-.75.75v1.5c0 .414.336.75.75.75h.75a.75.75 0 00.75-.75v-1.5a.75.75 0 00-.75-.75h-.75Zm.75 4.5a.75.75 0 01.75-.75h.75a.75.75 0 01.75.75v1.5a.75.75 0 01-.75.75h-.75a.75.75 0 01-.75-.75v-1.5Z" />
+                      </svg>
+                      <span>Fast QR code scanning</span>
                     </li>
                     <li className="flex items-center text-xs sm:text-sm text-neutral-700">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-2 sm:mr-3">
-                        <svg className="w-2 h-2 sm:w-3 sm:h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>real-time attendance tracking</span>
+                      <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 sm:mr-3 flex-shrink-0" />
+                      <span>Real-time attendance updates</span>
                     </li>
                     <li className="flex items-center text-xs sm:text-sm text-neutral-700">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-2 sm:mr-3">
-                        <svg className="w-2 h-2 sm:w-3 sm:h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>export attendance data anytime to CSV</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 sm:mr-3 flex-shrink-0">
+                        <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.586l-1.72-1.72a.75.75 0 00-1.06 1.06l3 3a.75.75 0 001.06 0l3-3a.75.75 0 10-1.06-1.06l-1.72 1.72V2.75Z" />
+                        <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                      </svg>
+                      <span>Easy data export (CSV)</span>
                     </li>
                   </ul>
                 </div>
@@ -731,34 +729,28 @@ const Welcome: React.FC = () => {
             {/* Step 4: View Club Details */}
             <motion.div className="mb-32" variants={welcomeVariants}>
               <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-12">
-                <div className="md:w-2/5 text-left">
-                  <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center mb-4 text-white text-3xl font-extrabold">4</div>
-                  <h3 className="text-2xl font-medium mb-4">manage everything in one place</h3>
-                  <p className="text-neutral-600 mb-6">view club data, analyze attendance, and manage members all from a simple dashboard.</p>
+                <div className="md:w-2/5 text-left bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl p-6 shadow-sm">
+                  {/* Combined Step Number and Title */}
+                  <h3 className="text-2xl sm:text-3xl mb-4 flex items-baseline gap-2">
+                    <span className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border border-gray-200 font-bold text-xl sm:text-2xl mr-2">4</span>
+                    <span className="text-lg sm:text-xl font-bold">your club, fully managed</span>
+                  </h3>
+                  <p className="text-neutral-600 mb-6">One clean dashboard for events, members, and attendance. Everything you need, nothing you don't.</p>
                   <ul className="space-y-3">
                     <li className="flex items-center text-sm text-neutral-700">
-                      <div className="w-5 h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-3">
-                        <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>all your events at a glance</span>
+                      <CalendarDays className="w-5 h-5 text-black mr-3 flex-shrink-0" />
+                      <span>At-a-glance event overview</span>
                     </li>
                     <li className="flex items-center text-sm text-neutral-700">
-                      <div className="w-5 h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-3">
-                        <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>member management</span>
+                      <Users className="w-5 h-5 text-black mr-3 flex-shrink-0" />
+                      <span>Simple member management</span>
                     </li>
                     <li className="flex items-center text-sm text-neutral-700">
-                      <div className="w-5 h-5 rounded-full bg-neutral-100 flex items-center justify-center mr-3">
-                        <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>csv export for school records</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-black mr-3 flex-shrink-0">
+                        <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.586l-1.72-1.72a.75.75 0 00-1.06 1.06l3 3a.75.75 0 001.06 0l3-3a.75.75 0 10-1.06-1.06l-1.72 1.72V2.75Z" />
+                        <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                      </svg>
+                      <span>One-click CSV export</span>
                     </li>
                   </ul>
                 </div>
@@ -882,7 +874,10 @@ const Welcome: React.FC = () => {
             viewport={{ once: true }}
           >
             <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-black">and yes, it's completely free</h2>
-            <p className="text-sm sm:text-base text-neutral-600 mb-6 sm:mb-8 max-w-xl mx-auto">get started with attendify, the best looking club management app</p>
+             <p className="text-sm sm:text-base text-neutral-600 mb-6 sm:mb-8 max-w-xl mx-auto flex items-center justify-center">
+               get started with attendify, the fastest club management app
+               <Zap className="w-4 h-4 ml-1.5 text-black" fill="currentColor" />
+             </p>
             <motion.button 
               className="px-6 sm:px-8 py-3 sm:py-4 bg-black text-white text-sm sm:text-base font-medium rounded-lg hover:bg-neutral-900 transition-all duration-200 flex items-center justify-center gap-2 mx-auto"
               whileTap={{ scale: 0.98 }}

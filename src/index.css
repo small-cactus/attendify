@@ -164,7 +164,12 @@ td {
   @apply max-w-7xl mx-auto px-4 py-8 space-y-8;
 }
 
-
+@media (max-width: 640px) {
+  .mobile-word-wrap {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
 
 @layer base {
   * {
