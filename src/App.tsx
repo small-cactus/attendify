@@ -4,10 +4,7 @@ import ClubDetail from './pages/ClubDetail';
 import ClubJoinQR from './pages/ClubJoinQR';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
-import JoinClub from './pages/JoinClub';
 import ClubJoinPage from './pages/ClubJoinPage';
-import JoinFlow from './pages/JoinFlow';
-import AttendEvent from './pages/AttendEvent';
 import EventCheckinPage from './pages/EventCheckinPage';
 import EventCheckinQR from './pages/EventCheckinQR';
 import Welcome from './pages/Welcome';
@@ -31,10 +28,9 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           
           {/* Member/Public routes */}
-          <Route path="/join" element={<JoinClub />} />
+          <Route path="/join" element={<ClubJoinPage />} />
           <Route path="/join/:clubId" element={<ClubJoinPage />} />
-          <Route path="/join-flow" element={<JoinFlow />} />
-          <Route path="/attend" element={<AttendEvent />} />
+          <Route path="/attend" element={<EventCheckinPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/checkin/:inviteCode" element={<EventCheckinPage />} />
           <Route path="/events/:inviteCode/checkin-qr" element={<EventCheckinQR />} />

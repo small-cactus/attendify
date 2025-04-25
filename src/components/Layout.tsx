@@ -53,7 +53,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {user && (
               <>
                 <Link to="/dashboard" className={navLinkClasses('/dashboard')}>
-                  Dashboard
+                  Student View
                 </Link>
                 <Link to="/clubs" className={navLinkClasses('/clubs')}>
                   My Clubs
@@ -76,7 +76,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <Link to="/" className={navLinkClasses('/')}>
                   Home
                 </Link>
-                <Link to="/join-flow" className={navLinkClasses('/join-flow')}>
+                <Link to="/join" className={navLinkClasses('/join')}>
                   Join Club
                 </Link>
                 <Link to="/attend" className={navLinkClasses('/attend')}>
