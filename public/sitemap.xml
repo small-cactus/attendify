@@ -6,7 +6,7 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://attendify.app/join-flow</loc>
+    <loc>https://attendify.app/join</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -20,8 +20,11 @@
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
-  <!-- Add other public pages if any -->
-  <!-- Example for pages requiring login (lower priority, less frequent change)
+  <url>
+    <loc>https://attendify.app/profile</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
   <url>
     <loc>https://attendify.app/dashboard</loc>
     <changefreq>weekly</changefreq>
@@ -33,9 +36,28 @@
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://attendify.app/profile</loc>
+    <loc>https://attendify.app/join/EXAMPLE_CLUB_ID</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
+    <priority>0.7</priority>
   </url>
-  -->
+  <url>
+    <loc>https://attendify.app/clubs/EXAMPLE_CLUB_ID</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://attendify.app/clubs/EXAMPLE_CLUB_ID/join-qr</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://attendify.app/checkin/EXAMPLE_INVITE_CODE</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://attendify.app/events/EXAMPLE_INVITE_CODE/checkin-qr</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
 </urlset> 
