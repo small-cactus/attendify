@@ -9,6 +9,7 @@ interface ClubInfo {
   id: string;
   name: string;
   description?: string;
+  category?: string;
 }
 
 // Shared transition for content
@@ -59,6 +60,7 @@ const ClubJoinPage: React.FC = () => {
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [step, setStep] = useState(clubId ? 2 : 1); // Start at step 2 if clubId is provided
+  const [isDemo, setIsDemo] = useState(false);
 
   // Fetch member_uuid from localStorage on load
   const [, setMemberUuid] = useState<string | null>(null);
@@ -68,6 +70,13 @@ const ClubJoinPage: React.FC = () => {
   useEffect(() => {
     setMemberUuid(localStorage.getItem('attendify_member_id'));
   }, []);
+
+  // Debug: Log all supabase responses and errors
+  const debugLog = (...args: any[]) => {
+    if (window.location.search.includes('debug=1')) {
+      console.log('[JOIN DEBUG]', ...args);
+    }
+  };
 
   // Handle name input and suggestions
   const handleNameInput = (inputValue: string) => {
@@ -106,18 +115,34 @@ const ClubJoinPage: React.FC = () => {
       try {
         const { data, error: fetchError } = await supabase
           .from('clubs')
-          .select('id, name, description')
-          .eq('id', clubId)
+          .select('id, name, description, category')
+          .eq('access_code', clubId)
           .single();
-          
+        debugLog('fetchClubInfoById', { data, fetchError });
         if (fetchError || !data) {
           setError('Could not load club information. Please check the link.');
           setClubInfo(null);
           setStep(1); // Go back to step 1 if there's an error
         } else {
           setClubInfo(data);
+          // Check if this is a demo club
+          if (data.category === 'Demo') {
+            setIsDemo(true);
+            // Prefill with demo username if this is a demo club
+            const demoName = `Demo User ${Math.floor(Math.random() * 1000)}`;
+            setMemberName(demoName);
+            
+            // For enhanced demo experience, auto-join after a short delay
+            if (window.location.search.includes('autojoin=1')) {
+              setTimeout(() => {
+                const joinButton = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+                if (joinButton) joinButton.click();
+              }, 1500);
+            }
+          }
         }
       } catch (error: any) {
+        debugLog('fetchClubInfoById catch', error);
         console.error('Error fetching club info:', error);
         setError(`Failed to load club: ${error.message || 'Please try again.'}`);
         setStep(1); // Go back to step 1 if there's an error
@@ -146,7 +171,7 @@ const ClubJoinPage: React.FC = () => {
         .select('id, name, description')
         .eq('access_code', inviteCode)
         .single();
-      
+      debugLog('verifyInviteCode', { club, clubError });
       if (clubError || !club) {
         setJoinError('Invalid invite code. Please try again.');
         setJoinLoading(false);
@@ -157,6 +182,7 @@ const ClubJoinPage: React.FC = () => {
       setJoinLoading(false);
       setStep(2); // Move to step 2 (name input)
     } catch (error: any) {
+      debugLog('verifyInviteCode catch', error);
       console.error('Error verifying invite code:', error);
       setJoinError(`Failed to verify code: ${error.message || 'Please try again.'}`);
       setJoinLoading(false);
@@ -180,7 +206,7 @@ const ClubJoinPage: React.FC = () => {
         .eq('club_id', clubInfo.id)
         .eq('name', memberName.trim())
         .single();
-
+      debugLog('handleJoinClub existingMember', { existingMember, existingMemberError });
       if (existingMemberError && existingMemberError.code !== 'PGRST116') { // Ignore 'No rows found' error
         throw existingMemberError;
       }
@@ -195,7 +221,8 @@ const ClubJoinPage: React.FC = () => {
         
         // Update the member's UUID if it was missing
         if (!existingMember.member_uuid) {
-          await supabase.from('members').update({ member_uuid: finalMemberUuid }).eq('id', existingMember.id);
+          const updateRes = await supabase.from('members').update({ member_uuid: finalMemberUuid }).eq('id', existingMember.id);
+          debugLog('handleJoinClub update member_uuid', updateRes);
         }
       } else {
         // Member does not exist in this club, always generate a new UUID
@@ -203,7 +230,7 @@ const ClubJoinPage: React.FC = () => {
         finalMemberUuid = uuidv4();
         
         // Create new member
-        const { error: insertError } = await supabase
+        const { error: insertError, data: insertData } = await supabase
           .from('members')
           .insert([{ 
             club_id: clubInfo.id, 
@@ -211,7 +238,7 @@ const ClubJoinPage: React.FC = () => {
             member_uuid: finalMemberUuid,
             preapproved: false // Defaulting to false as no preapproval check here
           }]);
-          
+        debugLog('handleJoinClub insert member', { insertData, insertError });
         if (insertError) {
           throw insertError;
         }
@@ -240,8 +267,10 @@ const ClubJoinPage: React.FC = () => {
           }
       }
       
+      debugLog('handleJoinClub success', { finalMemberUuid });
       setStep(3); // Move to success step
     } catch (error: any) {
+      debugLog('handleJoinClub catch', error);
       console.error('Error joining club:', error);
       setJoinError(`Failed to join club: ${error.message || 'Please try again.'}`);
     } finally {
@@ -413,18 +442,38 @@ const ClubJoinPage: React.FC = () => {
                 <h2 className="text-2xl font-semibold text-green-600 mb-3">Successfully Joined!</h2>
                 <p className="text-gray-700 mb-5">You have successfully joined <span className="font-medium">{clubInfo.name}</span> as {memberName}.</p>
                 <div className="flex flex-col space-y-3">
-                  <button 
-                    onClick={() => navigate('/dashboard')}
-                    className="w-full px-5 py-2.5 text-sm bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all"
-                  >
-                    Go to Dashboard
-                  </button>
-                  <button 
-                    onClick={() => window.location.reload()}
-                    className="w-full px-5 py-2.5 text-sm bg-gray-100 text-black font-medium rounded-lg hover:bg-gray-200 transition-all border border-gray-200"
-                  >
-                    Join Another Club
-                  </button>
+                  {isDemo ? (
+                    <motion.button 
+                      className="w-full px-5 py-2.5 text-sm bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all"
+                      onClick={() => {
+                        // Focus the opener window (main demo tab)
+                        if (window.opener) {
+                          window.opener.focus();
+                        }
+                        // Close the current tab
+                        window.close();
+                      }}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Return to Demo
+                    </motion.button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => navigate('/dashboard')}
+                        className="w-full px-5 py-2.5 text-sm bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all"
+                      >
+                        Go to Dashboard
+                      </button>
+                      <button 
+                        onClick={() => window.location.reload()}
+                        className="w-full px-5 py-2.5 text-sm bg-gray-100 text-black font-medium rounded-lg hover:bg-gray-200 transition-all border border-gray-200"
+                      >
+                        Join Another Club
+                      </button>
+                    </>
+                  )}
                 </div>
               </motion.div>
             )}

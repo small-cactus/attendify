@@ -7,6 +7,7 @@ interface LogoProps {
   textClassName?: string;
   imageClassName?: string;
   size?: number;
+  darkMode?: boolean;
 }
 
 const Logo: React.FC<LogoProps> = ({
@@ -15,12 +16,20 @@ const Logo: React.FC<LogoProps> = ({
   textClassName = 'text-lg',
   imageClassName = 'w-7 h-7',
   size,
+  darkMode = false,
 }) => {
-  const imageStyle = size ? { width: `${size}px`, height: `${size}px` } : {};
-  const textStyle = size ? { fontSize: `${size * 0.8}px` } : {};
+  const imageStyle = {
+    ...(size ? { width: `${size}px`, height: `${size}px` } : {}),
+    ...(darkMode ? { filter: 'invert(1)' } : {}),
+  };
+  
+  const effectiveTextStyle = size ? { fontSize: `${size * 0.8}px` } : {};
+  const effectiveTextColor = darkMode ? 'text-white' : 'text-black';
 
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span 
+      className={`inline-flex items-center gap-2 ${className}`}
+    >
       <img 
         src={logo} 
         alt="Attendify logo" 
@@ -29,8 +38,8 @@ const Logo: React.FC<LogoProps> = ({
       />
       {showText && (
         <span 
-          className={`font-bold text-black ${size ? '' : textClassName}`}
-          style={textStyle}
+          className={`font-bold ${effectiveTextColor} ${size ? '' : textClassName}`}
+          style={effectiveTextStyle}
         >
           attendify
         </span>
