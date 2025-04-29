@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '../components/Logo';
 import { supabase } from '../utils/supabaseClient';
-import CharFadeIn from '../components/CharFadeIn';
 
 // Page transition with blur
 const pageVariants = {
@@ -136,7 +135,6 @@ const Login: React.FC = () => {
   const [signupStep, setSignupStep] = useState<'intro' | 'demo' | 'form'>('intro');
   const [demoClubId, setDemoClubId] = useState<string | null>(null);
   const [demoQrUrl, setDemoQrUrl] = useState<string | null>(null);
-  const [demoJoined, setDemoJoined] = useState(false);
   const [demoInterval, setDemoInterval] = useState<number | null>(null);
   const [joinNotification, setJoinNotification] = useState(false);
   const [joinData, setJoinData] = useState<{name: string; timeAgo: string} | null>(null);
@@ -255,10 +253,6 @@ const Login: React.FC = () => {
         console.log('[DEMO Polling] Member detected via data.length!');
         if (demoJoinTriggered.current) return;
         demoJoinTriggered.current = true;
-        
-        setDemoJoined(true);
-        clearInterval(intervalId);
-        setDemoInterval(null);
         
         if (data && data.length > 0) {
           const joinedMember = data[0];
@@ -786,7 +780,6 @@ const Login: React.FC = () => {
                             <motion.button
                               onClick={() => {
                                 setJoinNotification(false);
-                                setDemoJoined(false);
                                 demoJoinTriggered.current = false;
                                 if (demoClubId) {
                                   startCheckingForJoins(demoClubId);
