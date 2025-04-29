@@ -456,7 +456,7 @@ const ClubJoinPage: React.FC = () => {
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      Return to Demo
+                      Close this tab
                     </motion.button>
                   ) : (
                     <>
