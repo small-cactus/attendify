@@ -84,7 +84,8 @@ const ClubJoinQR: React.FC = () => {
           </p>
           <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 inline-block mb-8">
             <QRCodeCanvas 
-              value={`${window.location.origin}/join/${clubId}`}
+              value={clubInfo && clubInfo.access_code ? `${window.location.origin}/join/${clubInfo.access_code}` : ''}
+              {...(clubInfo && clubInfo.access_code ? { onClick: () => console.log('[QR DEBUG] QR for join code:', clubInfo.access_code) } : {})}
               size={256} 
               level="H" 
               bgColor="#ffffff"
