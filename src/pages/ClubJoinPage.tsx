@@ -113,12 +113,59 @@ const ClubJoinPage: React.FC = () => {
       setError(null);
       
       try {
-        const { data, error: fetchError } = await supabase
+        // Try the original query with .single()
+        const { data, error: fetchError, status, statusText } = await supabase
           .from('clubs')
           .select('id, name, description, category')
           .eq('access_code', clubId)
           .single();
-        debugLog('fetchClubInfoById', { data, fetchError });
+        debugLog('fetchClubInfoById', { data, fetchError, status, statusText });
+        // EXTENSIVE LOGGING
+        if (fetchError) {
+          console.error('[JOIN DEBUG] fetchClubInfoById error:', fetchError);
+          if (fetchError.code === '406') {
+            // 406 Not Acceptable: Try again without .single() to see what comes back
+            console.warn('[JOIN DEBUG] 406 error detected, retrying without .single()');
+            const { data: arrData, error: arrError, status: arrStatus, statusText: arrStatusText } = await supabase
+              .from('clubs')
+              .select('id, name, description, category')
+              .eq('access_code', clubId);
+            debugLog('fetchClubInfoById array fallback', { arrData, arrError, arrStatus, arrStatusText });
+            console.log('[JOIN DEBUG] Array fallback result:', arrData, arrError);
+            if (arrError) {
+              setError('Could not load club information (406 fallback). Please check the link.');
+              setClubInfo(null);
+              setStep(1);
+            } else if (Array.isArray(arrData) && arrData.length === 1) {
+              setClubInfo(arrData[0]);
+              // Check if this is a demo club
+              if (arrData[0].category === 'Demo') {
+                setIsDemo(true);
+                const demoName = `Demo User ${Math.floor(Math.random() * 1000)}`;
+                setMemberName(demoName);
+                if (window.location.search.includes('autojoin=1')) {
+                  setTimeout(() => {
+                    const joinButton = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+                    if (joinButton) joinButton.click();
+                  }, 1500);
+                }
+              }
+            } else if (Array.isArray(arrData) && arrData.length === 0) {
+              setError('No club found for this code. (406 fallback)');
+              setClubInfo(null);
+              setStep(1);
+            } else if (Array.isArray(arrData) && arrData.length > 1) {
+              setError('Multiple clubs found for this code. Please contact support. (406 fallback)');
+              setClubInfo(null);
+              setStep(1);
+            } else {
+              setError('Unknown error (406 fallback).');
+              setClubInfo(null);
+              setStep(1);
+            }
+            return;
+          }
+        }
         if (fetchError || !data) {
           setError('Could not load club information. Please check the link.');
           setClubInfo(null);
@@ -131,7 +178,6 @@ const ClubJoinPage: React.FC = () => {
             // Prefill with demo username if this is a demo club
             const demoName = `Demo User ${Math.floor(Math.random() * 1000)}`;
             setMemberName(demoName);
-            
             // For enhanced demo experience, auto-join after a short delay
             if (window.location.search.includes('autojoin=1')) {
               setTimeout(() => {
@@ -331,7 +377,13 @@ const ClubJoinPage: React.FC = () => {
                       type="text"
                       placeholder="Enter the invite code"
                       value={inviteCode}
-                      onChange={e => setInviteCode(e.target.value)}
+                      onChange={e => {
+                        // Force uppercase for all input
+                        const upper = e.target.value.toUpperCase();
+                        setInviteCode(upper);
+                        // Log for debugging
+                        debugLog('Invite code input changed (forced uppercase):', upper);
+                      }}
                       required
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white"
                       disabled={joinLoading}
