@@ -129,6 +129,13 @@ const EventCheckinPage: React.FC = () => {
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
 
+  // Determine if check-in should be disabled due to time restrictions
+  const eventNotStarted = !!(
+    eventInfo?.checkin_only_during_event &&
+    eventInfo.event_date &&
+    new Date() < parseLocalDate(eventInfo.event_date)
+  );
+
   useEffect(() => {
     const storedMemberId = localStorage.getItem('attendify_member_id');
     setMemberUuid(storedMemberId);
@@ -1013,7 +1020,12 @@ const EventCheckinPage: React.FC = () => {
                       <button
                         onClick={handleCheckin}
                         className="flex-1 px-4 py-3 text-sm bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={checkinLoading || isVerifyingLocation || (eventInfo.checkin_location_enabled && locationPermissionStatus !== 'granted')}
+                        disabled={
+                          checkinLoading ||
+                          isVerifyingLocation ||
+                          (eventInfo.checkin_location_enabled && locationPermissionStatus !== 'granted') ||
+                          eventNotStarted
+                        }
                       >
                         {checkinLoading ? 'Checking In...' 
                         : isVerifyingLocation ? 'Verifying...' 
