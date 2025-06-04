@@ -608,7 +608,7 @@ const EventCheckinPage: React.FC = () => {
           >
              <p className="text-red-600 mb-4">{error}</p>
              <button onClick={() => navigate('/dashboard')} className="text-sm text-black border-b border-gray-300 hover:border-black">
-                Back to Dashboard
+               Back to Dashboard
              </button>
           </motion.div>
         ) : (
@@ -695,8 +695,8 @@ const EventCheckinPage: React.FC = () => {
                     >
                       Join a Club
                     </button>
-                    <button 
-                      onClick={() => navigate('/dashboard')} 
+                    <button
+                      onClick={() => navigate('/dashboard')}
                       type="button"
                       className="w-full mt-2 text-sm text-gray-600 hover:text-black"
                     >
@@ -802,8 +802,8 @@ const EventCheckinPage: React.FC = () => {
                       </>
                     )}
 
-                    <button 
-                      onClick={() => navigate('/dashboard')} 
+                    <button
+                      onClick={() => navigate('/dashboard')}
                       type="button"
                       className="w-full mt-6 text-sm text-gray-600 hover:text-black"
                     >
@@ -1028,7 +1028,7 @@ const EventCheckinPage: React.FC = () => {
                 <h2 className="text-2xl font-semibold text-green-600 mb-3">Checked In!</h2>
                 <p className="text-gray-700 mb-5">You've successfully checked in to <span className="font-medium">{eventInfo.name}</span> as <span className="font-medium">{memberName}</span>.</p>
                 <div className="flex flex-col space-y-3">
-                  <button 
+                  <button
                     onClick={() => navigate('/dashboard')}
                     className="w-full px-5 py-3 text-sm bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all"
                   >

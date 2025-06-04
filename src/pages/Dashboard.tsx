@@ -1015,10 +1015,12 @@ const Dashboard: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<any>(null);
 
-  // Redirect to login if not authenticated (match Profile/Clubs pattern)
+  // Students can access the dashboard without signing in, so only redirect
+  // creators who attempt to use owner features.
   useEffect(() => {
     if (!authLoading && !user) {
-      window.location.href = '/login';
+      // No automatic redirect; dashboard works in guest mode
+      return;
     }
   }, [authLoading, user]);
 
