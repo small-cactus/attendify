@@ -111,10 +111,10 @@ const AllEventsSection: React.FC<{
               // Find the next event that student is checked into
               const nextCheckedEvent = upcomingEvents
                 .filter(e => e.has_attended)
-                .sort((a, b) => parseLocalDate(a.event_date).getTime() - parseLocalDate(b.event_date).getTime())[0];
-              
+                .sort((a, b) => getEventStartDate(a).getTime() - getEventStartDate(b).getTime())[0];
+
               if (nextCheckedEvent) {
-                const eventDate = parseLocalDate(nextCheckedEvent.event_date);
+                const eventDate = getEventStartDate(nextCheckedEvent);
                 const now = new Date();
                 const diffTime = eventDate.getTime() - now.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -206,9 +206,9 @@ const UpcomingEventsSection: React.FC<{
         animate="visible"
       >
         {upcomingEvents
-          .sort((a, b) => parseLocalDate(a.event_date).getTime() - parseLocalDate(b.event_date).getTime())
+          .sort((a, b) => getEventStartDate(a).getTime() - getEventStartDate(b).getTime())
           .map(event => {
-            const eventDate = parseLocalDate(event.event_date);
+            const eventDate = getEventStartDate(event);
             const now = new Date();
             const diffTime = eventDate.getTime() - now.getTime();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -416,7 +416,7 @@ const PastEventsSection: React.FC<{
         animate="visible"
       >
         {pastEvents.map(event => {
-          const eventDate = parseLocalDate(event.event_date);
+          const eventDate = getEventStartDate(event);
           const now = new Date();
           const diffTime = now.getTime() - eventDate.getTime();
           const daysAgo = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -807,6 +807,8 @@ interface Event {
   checkin_code_enabled?: boolean;
   checkin_qr_enabled?: boolean;
   checkin_only_during_event?: boolean;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
   has_attended?: boolean;
 }
 
@@ -826,6 +828,14 @@ interface Member {
   name: string;
   preapproved?: boolean;
 }
+
+// Helper to resolve the actual start time for an event
+const getEventStartDate = (event: Event): Date => {
+  if (event.event_start_time) {
+    return new Date(event.event_start_time);
+  }
+  return parseLocalDate(event.event_date);
+};
 
 interface Attendance {
   id: string;
@@ -1185,7 +1195,7 @@ const Dashboard: React.FC = () => {
         // IMPORTANT: Add explicit filtering by club_id
         const { data: upcomingData, error: upcomingError } = await supabase
           .from('events')
-          .select('id, name, event_date, invite_code, club_id, checkin_location_enabled, checkin_code_enabled, checkin_qr_enabled, checkin_only_during_event')
+          .select('id, name, event_date, invite_code, club_id, checkin_location_enabled, checkin_code_enabled, checkin_qr_enabled, checkin_only_during_event, event_start_time, event_end_time')
           .eq('club_id', selectedClubId) // Explicitly filter by selected club
           .gte('event_date', todayISO)
           .order('event_date', { ascending: true });
@@ -1195,7 +1205,7 @@ const Dashboard: React.FC = () => {
         // IMPORTANT: Add explicit filtering by club_id
         const { data: pastData, error: pastError } = await supabase
           .from('events')
-          .select('id, name, event_date, invite_code, club_id, checkin_location_enabled, checkin_code_enabled, checkin_qr_enabled, checkin_only_during_event')
+          .select('id, name, event_date, invite_code, club_id, checkin_location_enabled, checkin_code_enabled, checkin_qr_enabled, checkin_only_during_event, event_start_time, event_end_time')
           .eq('club_id', selectedClubId) // Explicitly filter by selected club
           .lt('event_date', todayISO)
           .order('event_date', { ascending: false });
