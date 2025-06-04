@@ -512,7 +512,7 @@ const ClubJoinPage: React.FC = () => {
                     </motion.button>
                   ) : (
                     <>
-                      <button 
+                      <button
                         onClick={() => navigate('/dashboard')}
                         className="w-full px-5 py-2.5 text-sm bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all"
                       >
