@@ -736,8 +736,8 @@ const AttendEvent: React.FC = () => {
                 >
                   Check in to another event
                 </button>
-                <a 
-                  href="/dashboard" 
+                <a
+                  href="/dashboard"
                   className="py-3 px-4 bg-gray-100 text-black font-medium rounded-md hover:bg-gray-200 transition-all border border-gray-200"
                 >
                   Go to Dashboard
