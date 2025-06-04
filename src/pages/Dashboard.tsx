@@ -1015,10 +1015,12 @@ const Dashboard: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<any>(null);
 
-  // Redirect to login if not authenticated (match Profile/Clubs pattern)
+  // Students can access the dashboard without signing in, so only redirect
+  // creators who attempt to use owner features.
   useEffect(() => {
     if (!authLoading && !user) {
-      window.location.href = '/login';
+      // No automatic redirect; dashboard works in guest mode
+      return;
     }
   }, [authLoading, user]);
 
@@ -1045,30 +1047,25 @@ const Dashboard: React.FC = () => {
 
   const [ownerPreviewMode, setOwnerPreviewMode] = useState(false);
 
-  // Only fetch clubs if user is present (student mode)
+  // Fetch joined clubs from localStorage so the dashboard works for guests too
   useEffect(() => {
+    if (authLoading) return;
     setOwnerPreviewMode(false); // Reset preview mode when loading from localStorage
-    if (!authLoading && user) {
-      setLoadingClubs(true);
-      try {
-        const storedClubs = JSON.parse(localStorage.getItem('attendify_clubs') || '[]');
-        setUserClubs(storedClubs);
-        if (storedClubs.length > 0) {
-          setSelectedClubId(storedClubs[0].id);
-          setSelectedClub(storedClubs[0]);
-          setUserName(storedClubs[0].member_name || 'Member');
-        } else {
-          setUserName('Member');
-        }
-      } catch (error) {
-        setUserClubs([]);
+    setLoadingClubs(true);
+    try {
+      const storedClubs = JSON.parse(localStorage.getItem('attendify_clubs') || '[]');
+      setUserClubs(storedClubs);
+      if (storedClubs.length > 0) {
+        setSelectedClubId(storedClubs[0].id);
+        setSelectedClub(storedClubs[0]);
+        setUserName(storedClubs[0].member_name || 'Member');
+      } else {
         setUserName('Member');
-      } finally {
-        setLoadingClubs(false);
       }
-    } else if (!user) {
+    } catch (error) {
       setUserClubs([]);
       setUserName('Member');
+    } finally {
       setLoadingClubs(false);
     }
   }, [authLoading, user]);
