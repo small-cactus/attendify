@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
 import CreateEventModal from '../components/CreateEventModal';
+import { parseLocalDate } from '../lib/utils';
 import { IonIcon } from '@ionic/react';
 import { calendarOutline, peopleOutline, statsChartOutline, personCircleOutline, trashOutline } from 'ionicons/icons';
 
@@ -569,10 +570,10 @@ const ClubDetail: React.FC = () => {
                           {/* Left side - Date indicator */}
                           <div className="sm:w-24 p-4 bg-gray-50 flex flex-row sm:flex-col items-center justify-center text-center border-b sm:border-b-0 sm:border-r border-gray-200">
                             <div className="text-2xl font-bold text-gray-900">
-                              {new Date(event.event_date).getDate()}
+                              {parseLocalDate(event.event_date).getDate()}
                             </div>
                             <div className="text-sm text-gray-600 ml-2 sm:ml-0">
-                              {new Date(event.event_date).toLocaleString('en-US', { month: 'short' })}
+                              {parseLocalDate(event.event_date).toLocaleString('en-US', { month: 'short' })}
                             </div>
                           </div>
                           
@@ -871,7 +872,7 @@ const ClubDetail: React.FC = () => {
                             <tr key={row.id} className="hover:bg-gray-50">
                               <td className="p-3 text-gray-800">{attendanceTab === 'byEvent' ? row.event?.name : row.member?.name}</td>
                               <td className="p-3 text-gray-800">{attendanceTab === 'byEvent' ? row.member?.name : row.event?.name}</td>
-                              <td className="p-3 text-gray-500">{new Date(row.event?.event_date).toLocaleDateString()}</td>
+                              <td className="p-3 text-gray-500">{row.event?.event_date ? parseLocalDate(row.event.event_date).toLocaleDateString() : ''}</td>
                               <td className="p-3 text-gray-500">{new Date(row.attended_at).toLocaleString()}</td>
                             </tr>
                           ))}

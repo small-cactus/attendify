@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import { parseLocalDate } from '../lib/utils';
 
 interface Event {
   id: string;
@@ -442,10 +443,10 @@ const AttendEvent: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
+    const date = parseLocalDate(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -454,8 +455,8 @@ const AttendEvent: React.FC = () => {
   
   const formatRelativeTime = (dateString: string) => {
     if (!dateString) return '';
-    
-    const date = new Date(dateString);
+
+    const date = parseLocalDate(dateString);
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
