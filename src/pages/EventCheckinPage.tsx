@@ -5,6 +5,7 @@ import Logo from '../components/Logo';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateDistance } from '../utils/geolocation'; // Import helpers
 import { motion, AnimatePresence } from 'framer-motion';
+import { parseLocalDate } from '../lib/utils';
 
 // Additional imports for map
 import { MapPin } from 'lucide-react';
@@ -434,7 +435,7 @@ const EventCheckinPage: React.FC = () => {
         // Time window restriction
         if (eventInfo.checkin_only_during_event && eventInfo.event_date) {
           const now = new Date();
-          const start = new Date(eventInfo.event_date);
+          const start = parseLocalDate(eventInfo.event_date);
           if (now < start) {
             setCheckinError('Check-in is not allowed before the event starts.');
             setCheckinLoading(false);
@@ -536,10 +537,10 @@ const EventCheckinPage: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
+    const date = parseLocalDate(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -847,7 +848,7 @@ const EventCheckinPage: React.FC = () => {
                 {/* Time restriction notice */}
                 {eventInfo.checkin_only_during_event && eventInfo.event_date && (() => {
                   const now = new Date();
-                  const start = new Date(eventInfo.event_date);
+                  const start = parseLocalDate(eventInfo.event_date);
                   if (now < start) {
                     const timeRemaining = formatTimeRemaining(eventInfo.event_date);
                     return (

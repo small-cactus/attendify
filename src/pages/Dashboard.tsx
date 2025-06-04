@@ -6,6 +6,7 @@ import CharFadeIn from '../components/CharFadeIn';
 import { Users, Calendar, CheckCircle, User, ArrowRight, Clock, MapPin, BarChart3, Home, PlusCircle, ArrowLeft, ClipboardList } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { parseLocalDate } from '../lib/utils';
 
 // Animation config for staggered entrance with blur effect
 const TAB_TRANSITION = {
@@ -110,10 +111,10 @@ const AllEventsSection: React.FC<{
               // Find the next event that student is checked into
               const nextCheckedEvent = upcomingEvents
                 .filter(e => e.has_attended)
-                .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())[0];
+                .sort((a, b) => parseLocalDate(a.event_date).getTime() - parseLocalDate(b.event_date).getTime())[0];
               
               if (nextCheckedEvent) {
-                const eventDate = new Date(nextCheckedEvent.event_date);
+                const eventDate = parseLocalDate(nextCheckedEvent.event_date);
                 const now = new Date();
                 const diffTime = eventDate.getTime() - now.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -205,9 +206,9 @@ const UpcomingEventsSection: React.FC<{
         animate="visible"
       >
         {upcomingEvents
-          .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+          .sort((a, b) => parseLocalDate(a.event_date).getTime() - parseLocalDate(b.event_date).getTime())
           .map(event => {
-            const eventDate = new Date(event.event_date);
+            const eventDate = parseLocalDate(event.event_date);
             const now = new Date();
             const diffTime = eventDate.getTime() - now.getTime();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -415,7 +416,7 @@ const PastEventsSection: React.FC<{
         animate="visible"
       >
         {pastEvents.map(event => {
-          const eventDate = new Date(event.event_date);
+          const eventDate = parseLocalDate(event.event_date);
           const now = new Date();
           const diffTime = now.getTime() - eventDate.getTime();
           const daysAgo = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -713,7 +714,7 @@ const AttendanceSection: React.FC<{
                   .map(record => (
                   <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-4 font-medium text-gray-900">{record.event_name}</td>
-                    <td className="py-3 px-4 text-gray-600">{new Date(record.event_date).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-gray-600">{parseLocalDate(record.event_date).toLocaleDateString()}</td>
                     <td className="py-3 px-4 text-gray-600">{new Date(record.attended_at).toLocaleString()}</td>
                   </tr>
                 ))}
@@ -731,7 +732,7 @@ const AttendanceSection: React.FC<{
                 <div className="mt-1 text-sm space-y-2">
                   <div className="flex items-center text-gray-600">
                     <Calendar className="w-4 h-4 mr-2" />
-                    <span>{new Date(record.event_date).toLocaleDateString()}</span>
+                    <span>{parseLocalDate(record.event_date).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center text-gray-600">
                     <Clock className="w-4 h-4 mr-2" />
