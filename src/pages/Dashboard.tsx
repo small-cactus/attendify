@@ -832,7 +832,15 @@ interface Member {
 // Helper to resolve the actual start time for an event
 const getEventStartDate = (event: Event): Date => {
   if (event.event_start_time) {
-    return new Date(event.event_start_time);
+    // Handle both full timestamp strings and plain time strings
+    const direct = new Date(event.event_start_time);
+    if (!isNaN(direct.getTime())) return direct;
+
+    // If only a time was provided, combine with the event date
+    if (event.event_date) {
+      const combined = new Date(`${event.event_date}T${event.event_start_time}`);
+      if (!isNaN(combined.getTime())) return combined;
+    }
   }
   return parseLocalDate(event.event_date);
 };
