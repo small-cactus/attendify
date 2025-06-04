@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { calculateDistance } from '../utils/geolocation'; // Import helpers
 import { motion, AnimatePresence } from 'framer-motion';
 import { parseLocalDate } from '../lib/utils';
+import { getCloseMatches } from '../utils/nameMatcher';
 
 // Additional imports for map
 import { MapPin } from 'lucide-react';
@@ -117,6 +118,7 @@ const EventCheckinPage: React.FC = () => {
   const [codeInput, setCodeInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestedNames, setSuggestedNames] = useState<string[]>([]);
+  const [clubMemberNames, setClubMemberNames] = useState<string[]>([]);
   const [view, setView] = useState<'events' | 'code'>('events'); // Default to events view
   const [isChangingName, setIsChangingName] = useState(false); // Flag to show name change UI
 
@@ -201,6 +203,7 @@ const EventCheckinPage: React.FC = () => {
           location_radius_meters: data.location_radius_meters
         };
         setEventInfo(flatData);
+        await fetchClubMembers(flatData.club_id);
         
         // Auto-fill member name if this club matches one of the user's saved clubs
         const matchingClub = userClubs.find(club => club.id === flatData.club_id);
@@ -346,18 +349,11 @@ const EventCheckinPage: React.FC = () => {
 
   const handleNameInput = (inputValue: string) => {
     setMemberName(inputValue);
-    
-    if (inputValue.length > 0) {
-      // Get stored clubs and their member names
-      const storedClubs = JSON.parse(localStorage.getItem('attendify_clubs') || '[]') as Array<{id: string, name: string, member_name: string}>;
-      const existingNames = storedClubs.map(club => club.member_name).filter(Boolean);
-      
-      // Find suggestions that start with the input value
-      const matchingSuggestions = [...new Set(existingNames)]
-        .filter(name => name.toLowerCase().startsWith(inputValue.toLowerCase()));
-      
-      setSuggestedNames(matchingSuggestions);
-      setShowSuggestions(matchingSuggestions.length > 0);
+
+    if (inputValue.trim().length > 0) {
+      const matches = getCloseMatches(inputValue, clubMemberNames);
+      setSuggestedNames(matches);
+      setShowSuggestions(matches.length > 0);
     } else {
       setSuggestedNames([]);
       setShowSuggestions(false);
@@ -367,6 +363,20 @@ const EventCheckinPage: React.FC = () => {
   const selectSuggestedName = (name: string) => {
     setMemberName(name);
     setShowSuggestions(false);
+  };
+
+  const fetchClubMembers = async (clubId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('members')
+        .select('name')
+        .eq('club_id', clubId);
+      if (!error && data) {
+        setClubMemberNames(data.map(m => m.name));
+      }
+    } catch (err) {
+      console.error('Error fetching club members:', err);
+    }
   };
 
   const verifyEventCode = async () => {
@@ -391,7 +401,9 @@ const EventCheckinPage: React.FC = () => {
   
   const selectEvent = (event: EventInfo) => {
     setEventInfo(event);
-    
+
+    fetchClubMembers(event.club_id);
+
     // Check for location requirements
     if (event.checkin_location_enabled) {
       requestLocationAndCheck(event);

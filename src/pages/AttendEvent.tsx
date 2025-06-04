@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { parseLocalDate } from '../lib/utils';
+import { getCloseMatches } from '../utils/nameMatcher';
 
 interface Event {
   id: string;
@@ -267,12 +268,12 @@ const AttendEvent: React.FC = () => {
 
   const handleNameInput = (input: string) => {
     setMemberName(input);
-    
-    // Filter for name matches for autocomplete
+
     if (input.trim() !== '') {
-      const matches = clubMembers
-        .filter(member => member.name.toLowerCase().includes(input.toLowerCase()))
-        .map(member => member.name);
+      const matches = getCloseMatches(
+        input,
+        clubMembers.map(member => member.name)
+      );
       setNameMatches(matches);
     } else {
       setNameMatches([]);
