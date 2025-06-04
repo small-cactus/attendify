@@ -985,8 +985,8 @@ const ClubContentWithFade: React.FC<ClubContentWithFadeProps> = ({
                 key={activeTab}
                 variants={tabVariants}
                 initial="hidden"
-                // Only animate to visible when not loading
-                animate={isCurrentTabLoading ? "hidden" : "visible"}
+                // Animate once on mount, keep visible during subsequent loads
+                animate="visible"
                 exit="exit"
                 className="relative"
               >
