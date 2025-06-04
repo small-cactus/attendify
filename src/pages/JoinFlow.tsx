@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../utils/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getCloseMatches } from '../utils/nameMatcher';
 
 const JoinFlow: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -9,6 +10,7 @@ const JoinFlow: React.FC = () => {
   const [name, setName] = useState('');
   const [clubDetails, setClubDetails] = useState<any>(null);
   const [preapprovedMembers, setPreapprovedMembers] = useState<string[]>([]);
+  const [memberNames, setMemberNames] = useState<string[]>([]);
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,17 +41,17 @@ const JoinFlow: React.FC = () => {
         return;
       }
 
-      // Get preapproved members for autocomplete
+      // Get all members so we can suggest names and identify preapproved ones
       const { data: members, error: membersError } = await supabase
         .from('members')
-        .select('name')
-        .eq('club_id', club.id)
-        .eq('preapproved', true);
+        .select('name, preapproved')
+        .eq('club_id', club.id);
 
       if (membersError) {
-        console.error('Error fetching preapproved members:', membersError);
-      } else {
-        setPreapprovedMembers(members?.map(m => m.name) || []);
+        console.error('Error fetching members:', membersError);
+      } else if (members) {
+        setPreapprovedMembers(members.filter(m => m.preapproved).map(m => m.name));
+        setMemberNames(members.map(m => m.name));
       }
 
       setClubDetails(club);
@@ -65,13 +67,9 @@ const JoinFlow: React.FC = () => {
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputName = e.target.value;
     setName(inputName);
-    
-    // Filter preapproved members for autocomplete
+
     if (inputName.trim() !== '') {
-      const filteredSuggestions = preapprovedMembers.filter(member => 
-        member.toLowerCase().includes(inputName.toLowerCase())
-      );
-      setAutocompleteSuggestions(filteredSuggestions);
+      setAutocompleteSuggestions(getCloseMatches(inputName, memberNames));
     } else {
       setAutocompleteSuggestions([]);
     }

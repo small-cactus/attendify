@@ -4,6 +4,7 @@ import { supabase } from '../utils/supabaseClient';
 import Logo from '../components/Logo';
 import { v4 as uuidv4 } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getCloseMatches } from '../utils/nameMatcher';
 
 interface ClubInfo {
   id: string;
@@ -66,6 +67,8 @@ const ClubJoinPage: React.FC = () => {
   const [, setMemberUuid] = useState<string | null>(null);
   const [suggestedNames, setSuggestedNames] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [memberNames, setMemberNames] = useState<string[]>([]);
+  const [preapprovedMembers, setPreapprovedMembers] = useState<string[]>([]);
   
   useEffect(() => {
     setMemberUuid(localStorage.getItem('attendify_member_id'));
@@ -81,18 +84,11 @@ const ClubJoinPage: React.FC = () => {
   // Handle name input and suggestions
   const handleNameInput = (inputValue: string) => {
     setMemberName(inputValue);
-    
-    if (inputValue.length > 0) {
-      // Get stored clubs and their member names
-      const storedClubs = JSON.parse(localStorage.getItem('attendify_clubs') || '[]') as Array<{id: string, name: string, member_name: string}>;
-      const existingNames = storedClubs.map(club => club.member_name).filter(Boolean);
-      
-      // Find suggestions that start with the input value
-      const matchingSuggestions = [...new Set(existingNames)]
-        .filter(name => name.toLowerCase().startsWith(inputValue.toLowerCase()));
-      
-      setSuggestedNames(matchingSuggestions);
-      setShowSuggestions(matchingSuggestions.length > 0);
+
+    if (inputValue.trim().length > 0) {
+      const matches = getCloseMatches(inputValue, memberNames);
+      setSuggestedNames(matches);
+      setShowSuggestions(matches.length > 0);
     } else {
       setSuggestedNames([]);
       setShowSuggestions(false);
@@ -102,6 +98,21 @@ const ClubJoinPage: React.FC = () => {
   const selectSuggestedName = (name: string) => {
     setMemberName(name);
     setShowSuggestions(false);
+  };
+
+  const fetchMembers = async (clubId: string) => {
+    try {
+      const { data: members, error } = await supabase
+        .from('members')
+        .select('name, preapproved')
+        .eq('club_id', clubId);
+      if (!error && members) {
+        setMemberNames(members.map(m => m.name));
+        setPreapprovedMembers(members.filter(m => m.preapproved).map(m => m.name));
+      }
+    } catch (err) {
+      console.error('Error fetching members:', err);
+    }
   };
 
   // If clubId is provided, fetch club info directly
@@ -138,6 +149,7 @@ const ClubJoinPage: React.FC = () => {
               setStep(1);
             } else if (Array.isArray(arrData) && arrData.length === 1) {
               setClubInfo(arrData[0]);
+              await fetchMembers(arrData[0].id);
               // Check if this is a demo club
               if (arrData[0].category === 'Demo') {
                 setIsDemo(true);
@@ -172,6 +184,7 @@ const ClubJoinPage: React.FC = () => {
           setStep(1); // Go back to step 1 if there's an error
         } else {
           setClubInfo(data);
+          await fetchMembers(data.id);
           // Check if this is a demo club
           if (data.category === 'Demo') {
             setIsDemo(true);
@@ -225,6 +238,7 @@ const ClubJoinPage: React.FC = () => {
       }
 
       setClubInfo(club);
+      await fetchMembers(club.id);
       setJoinLoading(false);
       setStep(2); // Move to step 2 (name input)
     } catch (error: any) {
@@ -276,13 +290,14 @@ const ClubJoinPage: React.FC = () => {
         finalMemberUuid = uuidv4();
         
         // Create new member
+        const isPreapproved = preapprovedMembers.includes(memberName.trim());
         const { error: insertError, data: insertData } = await supabase
           .from('members')
           .insert([{ 
-            club_id: clubInfo.id, 
-            name: memberName.trim(), 
+            club_id: clubInfo.id,
+            name: memberName.trim(),
             member_uuid: finalMemberUuid,
-            preapproved: false // Defaulting to false as no preapproval check here
+            preapproved: isPreapproved
           }]);
         debugLog('handleJoinClub insert member', { insertData, insertError });
         if (insertError) {
