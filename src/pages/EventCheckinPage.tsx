@@ -15,6 +15,8 @@ interface EventInfo {
   id: string; // Need event ID for attendance
   name: string;
   event_date: string;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
   club_id: string;
   club_name?: string;
   checkin_location_enabled?: boolean;
@@ -71,9 +73,24 @@ const tabVariants = {
   }
 };
 
+function parseEventDateTime(dateString: string, timeString?: string | null): Date {
+  let date = parseLocalDate(dateString);
+
+  if (timeString) {
+    if (timeString.includes('T') || timeString.includes(' ')) {
+      date = new Date(timeString.replace(' ', 'T'));
+    } else {
+      const [h, m] = timeString.split(':').map(Number);
+      date.setHours(h || 0, m || 0, 0, 0);
+    }
+  }
+
+  return date;
+}
+
 // Format time remaining helper function
-const formatTimeRemaining = (targetDate: string): string => {
-  const target = new Date(targetDate);
+const formatTimeRemaining = (dateString: string, timeString?: string | null): string => {
+  const target = parseEventDateTime(dateString, timeString);
   const now = new Date();
   const diffMs = target.getTime() - now.getTime();
   
@@ -133,7 +150,7 @@ const EventCheckinPage: React.FC = () => {
   const eventNotStarted = !!(
     eventInfo?.checkin_only_during_event &&
     eventInfo.event_date &&
-    new Date() < parseLocalDate(eventInfo.event_date)
+    new Date() < parseEventDateTime(eventInfo.event_date, eventInfo.event_start_time)
   );
 
   useEffect(() => {
@@ -180,7 +197,7 @@ const EventCheckinPage: React.FC = () => {
     try {
       const { data, error: fetchError } = await supabase
         .from('events')
-        .select('id, name, event_date, club_id, clubs ( name ), checkin_location_enabled, checkin_code_enabled, checkin_qr_enabled, checkin_only_during_event, location_lat, location_lng, location_radius_meters')
+        .select('id, name, event_date, event_start_time, event_end_time, club_id, clubs ( name ), checkin_location_enabled, checkin_code_enabled, checkin_qr_enabled, checkin_only_during_event, location_lat, location_lng, location_radius_meters')
         .eq('invite_code', code)
         .single();
         
@@ -199,6 +216,8 @@ const EventCheckinPage: React.FC = () => {
           id: data.id,
           name: data.name,
           event_date: data.event_date,
+          event_start_time: data.event_start_time,
+          event_end_time: data.event_end_time,
           club_id: data.club_id,
           club_name: clubName,
           checkin_location_enabled: data.checkin_location_enabled,
@@ -245,7 +264,7 @@ const EventCheckinPage: React.FC = () => {
       const { data, error } = await supabase
         .from('events')
         .select(`
-          id, name, event_date, invite_code, club_id,
+          id, name, event_date, event_start_time, event_end_time, invite_code, club_id,
           checkin_location_enabled, checkin_qr_enabled, checkin_code_enabled,
           checkin_only_during_event, location_lat, location_lng, location_radius_meters
         `)
@@ -454,7 +473,7 @@ const EventCheckinPage: React.FC = () => {
         // Time window restriction
         if (eventInfo.checkin_only_during_event && eventInfo.event_date) {
           const now = new Date();
-          const start = parseLocalDate(eventInfo.event_date);
+          const start = parseEventDateTime(eventInfo.event_date, eventInfo.event_start_time);
           if (now < start) {
             setCheckinError('Check-in is not allowed before the event starts.');
             setCheckinLoading(false);
@@ -554,9 +573,10 @@ const EventCheckinPage: React.FC = () => {
      }
   };
 
-  const formatDate = (dateString: string) => {
+
+  const formatDate = (dateString: string, timeString?: string | null) => {
     if (!dateString) return '';
-    const date = parseLocalDate(dateString);
+    const date = parseEventDateTime(dateString, timeString);
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
@@ -566,10 +586,10 @@ const EventCheckinPage: React.FC = () => {
     });
   };
   
-  const formatRelativeTime = (dateString: string) => {
+  const formatRelativeTime = (dateString: string, timeString?: string | null) => {
     if (!dateString) return '';
-    
-    const date = new Date(dateString);
+
+    const date = parseEventDateTime(dateString, timeString);
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
@@ -787,10 +807,10 @@ const EventCheckinPage: React.FC = () => {
                                 >
                                   <div>
                                     <div className="font-medium text-black">{event.name}</div>
-                                    <div className="text-xs text-gray-400">{formatDate(event.event_date)}</div>
+                                    <div className="text-xs text-gray-400">{formatDate(event.event_date, event.event_start_time)}</div>
                                   </div>
                                   <div className="text-xs font-medium px-2 py-1 bg-gray-100 rounded-lg text-black mt-2 sm:mt-0 inline-block sm:block">
-                                    {formatRelativeTime(event.event_date)}
+                                    {formatRelativeTime(event.event_date, event.event_start_time)}
                                   </div>
                                 </button>
                               ))
@@ -849,7 +869,7 @@ const EventCheckinPage: React.FC = () => {
                 </h1>
                 <p className="text-md text-gray-700 mb-2">{eventInfo.club_name}</p>
                 <p className="text-sm text-gray-500 mb-4">
-                  {formatDate(eventInfo.event_date)}
+                  {formatDate(eventInfo.event_date, eventInfo.event_start_time)}
                 </p>
                 
                 {/* User name display with option to change */}
@@ -867,9 +887,9 @@ const EventCheckinPage: React.FC = () => {
                 {/* Time restriction notice */}
                 {eventInfo.checkin_only_during_event && eventInfo.event_date && (() => {
                   const now = new Date();
-                  const start = parseLocalDate(eventInfo.event_date);
+                  const start = parseEventDateTime(eventInfo.event_date, eventInfo.event_start_time);
                   if (now < start) {
-                    const timeRemaining = formatTimeRemaining(eventInfo.event_date);
+                    const timeRemaining = formatTimeRemaining(eventInfo.event_date, eventInfo.event_start_time);
                     return (
                       <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-600 text-sm">
                         <div className="flex items-start">
