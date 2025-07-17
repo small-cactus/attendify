@@ -7,6 +7,7 @@ import Profile from './pages/Profile';
 import ClubJoinPage from './pages/ClubJoinPage';
 import EventCheckinPage from './pages/EventCheckinPage';
 import EventCheckinQR from './pages/EventCheckinQR';
+import CheckinCodePage from './pages/CheckinCodePage';
 import Welcome from './pages/Welcome';
 import Dashboard from './pages/Dashboard';
 import './index.css';
@@ -32,6 +33,7 @@ function App() {
           <Route path="/join/:clubId" element={<ClubJoinPage />} />
           <Route path="/attend" element={<EventCheckinPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/checkin" element={<CheckinCodePage />} />
           <Route path="/checkin/:inviteCode" element={<EventCheckinPage />} />
           <Route path="/events/:inviteCode/checkin-qr" element={<EventCheckinQR />} />
           
