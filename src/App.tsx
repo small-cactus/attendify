@@ -13,11 +13,13 @@ import Entry from './pages/Entry';
 import RoleConfirm from './pages/RoleConfirm';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
     <Router>
       <AuthProvider>
+        <ScrollToTop />
         <Routes>
           {/* Entry point decides where to route */}
           <Route path="/" element={<Entry />} />
