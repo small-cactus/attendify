@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../utils/supabaseClient';
+import Layout from '../components/Layout';
 import Logo from '../components/Logo';
 import CharFadeIn from '../components/CharFadeIn';
-import { Users, Calendar, CheckCircle, User, ArrowRight, Clock, MapPin, BarChart3, Home, PlusCircle, ArrowLeft, ClipboardList } from 'lucide-react';
+import { Users, Calendar, CheckCircle, User, ArrowRight, Clock, MapPin, BarChart3, PlusCircle, ClipboardList } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { parseLocalDate } from '../lib/utils';
@@ -1508,43 +1509,8 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div 
-      className="min-h-screen bg-white flex flex-col relative"
-    >
-      {/* Updated Header */}
-      <div className="bg-white border-b border-gray-200 fixed w-full z-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex justify-between items-center py-4">
-          <Logo showText={true} imageClassName="w-7 h-7" textClassName="text-lg" />
-          <div className="flex items-center gap-3 sm:gap-4">
-            {profile?.role === 'owner' && (
-              <Link
-                to="/clubs" // Link to creator's club management page
-                className="text-sm text-gray-600 hover:text-black flex items-center gap-1.5 p-2 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Return to Clubs</span>
-              </Link>
-            )}
-            <Link
-              to="/"
-              className="text-sm text-gray-600 hover:text-black flex items-center gap-1.5 p-2 rounded-md hover:bg-gray-100 transition-colors"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">Home</span>
-            </Link>
-            <Link
-              to="/join"
-              className="px-4 py-1.5 text-sm bg-black text-white font-medium rounded-md hover:bg-gray-900 transition-all flex items-center gap-1.5"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Join Club</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <main className="flex-grow pt-20 md:pt-24 p-3 sm:p-5 md:p-6">
-        <div className="max-w-6xl mx-auto">
+    <Layout>
+      <div className="max-w-6xl mx-auto p-3 sm:p-5 md:p-6">
           {/* LOADING STATE: Show spinner and debug info */}
           {authLoading ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
@@ -1625,7 +1591,6 @@ const Dashboard: React.FC = () => {
             </>
           )}
         </div>
-      </main>
       
       {/* Footer */}
       <footer className="mt-12 pt-8 pb-12 bg-white border-t border-gray-200">
@@ -1655,7 +1620,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </footer>
-    </div>
+    </Layout>
   );
 };
 
