@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
 import { QRCodeCanvas } from 'qrcode.react';
 import { motion } from 'framer-motion';
+import { Copy } from 'lucide-react';
 import Logo from '../components/Logo';
 
 interface EventInfo {
@@ -97,6 +98,14 @@ const EventCheckinQR: React.FC = () => {
 
   const checkinUrl = eventInfo ? `${window.location.origin}/checkin/${inviteCode}` : '';
 
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(checkinUrl);
+    } catch (e) {
+      console.error('Failed to copy link', e);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-gray-50 p-6 relative">
       {/* Branding */}
@@ -156,13 +165,21 @@ const EventCheckinQR: React.FC = () => {
               fgColor="#000000"
             />
           </div>
-           <p className="text-sm text-gray-500 mb-2">Or go to:</p>
-           <p className="text-lg font-mono break-all p-4 bg-gray-50 rounded-lg text-black inline-block mb-2 border border-gray-200">
-             {checkinUrl}
-           </p>
-            <p className="text-sm text-gray-500 mb-8">
-             and enter your name.
-           </p>
+          <p className="text-sm text-gray-500 mb-2">
+            Or go to <span className="font-medium text-gray-800">attendify.app/attend</span> and enter code:
+          </p>
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <p className="text-3xl font-mono tracking-widest p-4 bg-gray-50 rounded-lg text-black inline-block border border-gray-200">
+              {inviteCode}
+            </p>
+            <button
+              onClick={copyLink}
+              aria-label="Copy direct link"
+              className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100"
+            >
+              <Copy className="w-5 h-5 text-gray-700" />
+            </button>
+          </div>
            <Link 
              to={`/clubs/${eventInfo.club_id}`}
              className="px-6 py-2.5 text-sm bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all duration-200"
