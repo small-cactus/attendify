@@ -9,6 +9,8 @@ import EventCheckinPage from './pages/EventCheckinPage';
 import EventCheckinQR from './pages/EventCheckinQR';
 import Welcome from './pages/Welcome';
 import Dashboard from './pages/Dashboard';
+import Entry from './pages/Entry';
+import RoleConfirm from './pages/RoleConfirm';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -17,8 +19,9 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
-          {/* New welcome page as the main entry point */}
-          <Route path="/" element={<Welcome />} />
+          {/* Entry point decides where to route */}
+          <Route path="/" element={<Entry />} />
+          <Route path="/welcome" element={<Welcome />} />
           
           {/* Club owner routes */}
           <Route path="/clubs" element={<Clubs />} />
@@ -32,11 +35,12 @@ function App() {
           <Route path="/join/:clubId" element={<ClubJoinPage />} />
           <Route path="/attend" element={<EventCheckinPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/role-confirm" element={<RoleConfirm />} />
           <Route path="/checkin/:inviteCode" element={<EventCheckinPage />} />
           <Route path="/events/:inviteCode/checkin-qr" element={<EventCheckinQR />} />
           
           {/* Fallback */}
-          <Route path="*" element={<Welcome />} />
+          <Route path="*" element={<Entry />} />
         </Routes>
       </AuthProvider>
     </Router>
