@@ -1,8 +1,75 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 
 const Home: React.FC = () => {
+  console.log('Home component rendering');
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isScrollingRef = useRef(false);
+
+  useEffect(() => {
+    console.log('useEffect running - this should appear in console');
+    const startAutoScroll = () => {
+      console.log('startAutoScroll called');
+      isScrollingRef.current = true;
+      const scrollStep = 3;
+      const scrollInterval = 50;
+
+      const scrollDown = () => {
+        if (isScrollingRef.current) {
+          console.log('Scrolling by', scrollStep, 'pixels');
+          window.scrollBy(0, scrollStep);
+          setTimeout(scrollDown, scrollInterval);
+        } else {
+          console.log('Auto-scroll stopped');
+        }
+      };
+
+      scrollDown();
+    };
+
+    const resetTimer = () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      isScrollingRef.current = false;
+      
+      timeoutRef.current = setTimeout(() => {
+        console.log('Timer fired, starting auto-scroll');
+        if (!isScrollingRef.current) {
+          startAutoScroll();
+        }
+      }, 1000);
+    };
+
+    const handleUserActivity = (event: Event) => {
+      console.log('User activity detected:', event.type);
+      if (isScrollingRef.current) {
+        console.log('Stopping auto-scroll due to user activity');
+        isScrollingRef.current = false;
+      }
+      resetTimer();
+    };
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    events.forEach(event => {
+      document.addEventListener(event, handleUserActivity, true);
+    });
+
+    console.log('Effect initialized, setting up timer');
+    resetTimer();
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserActivity, true);
+      });
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <Layout>
       <div className="min-h-screen">
@@ -74,6 +141,38 @@ const Home: React.FC = () => {
                 </p>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Additional content for scrolling */}
+        <section className="py-24 bg-gray-50">
+          <div className="max-w-6xl mx-auto px-6 text-center">
+            <h2 className="text-3xl font-bold text-[#1d1d1f] mb-8">Why Choose Attendify?</h2>
+            <p className="text-lg text-[#424245] max-w-2xl mx-auto mb-12">
+              Join thousands of organizations already using Attendify to streamline their attendance tracking process.
+            </p>
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="text-left">
+                <h3 className="text-xl font-semibold mb-4">Real-time Analytics</h3>
+                <p className="text-[#424245]">Get instant insights into attendance patterns and member engagement with our comprehensive analytics dashboard.</p>
+              </div>
+              <div className="text-left">
+                <h3 className="text-xl font-semibold mb-4">Mobile Friendly</h3>
+                <p className="text-[#424245]">Access your attendance data anywhere, anytime with our responsive design that works perfectly on all devices.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24">
+          <div className="max-w-6xl mx-auto px-6 text-center">
+            <h2 className="text-3xl font-bold text-[#1d1d1f] mb-8">Ready to Get Started?</h2>
+            <p className="text-lg text-[#424245] max-w-2xl mx-auto mb-12">
+              Transform your attendance tracking experience today with Attendify's powerful yet simple platform.
+            </p>
+            <Link to="/clubs" className="primary-button">
+              Start Your Free Trial
+            </Link>
           </div>
         </section>
       </div>
