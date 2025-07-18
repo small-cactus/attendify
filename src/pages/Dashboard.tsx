@@ -89,8 +89,7 @@ const AllEventsSection: React.FC<{
   upcomingEvents: EventData[];
   pastEvents: EventData[];
   eventAttendees: Record<string, Member[]>;
-  userName: string;
-}> = ({ loading, upcomingEvents, pastEvents, eventAttendees, userName }) => (
+}> = ({ loading, upcomingEvents, pastEvents, eventAttendees }) => (
   <div
     key="events"
                     className="bg-white rounded-b-2xl border border-gray-200 border-t-0 px-3 py-6"
@@ -162,14 +161,12 @@ const AllEventsSection: React.FC<{
           loading={loading}
           upcomingEvents={upcomingEvents}
           eventAttendees={eventAttendees}
-          userName={userName}
         />
         
         <PastEventsSection 
           loading={loading}
           pastEvents={pastEvents}
           eventAttendees={eventAttendees}
-          userName={userName}
         />
       </div>
     )}
@@ -180,8 +177,7 @@ const UpcomingEventsSection: React.FC<{
   loading: boolean;
   upcomingEvents: EventData[];
   eventAttendees: Record<string, Member[]>;
-  userName: string;
-}> = ({ loading, upcomingEvents, eventAttendees, userName }) => {
+}> = ({ loading, upcomingEvents, eventAttendees }) => {
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
   
   const toggleTitle = (eventId: string) => {
@@ -373,8 +369,7 @@ const PastEventsSection: React.FC<{
   loading: boolean;
   pastEvents: EventData[];
   eventAttendees: Record<string, Member[]>;
-  userName: string;
-}> = ({ loading, pastEvents, eventAttendees, userName }) => {
+}> = ({ loading, pastEvents, eventAttendees }) => {
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
   
@@ -903,7 +898,6 @@ const ClubContentWithFade: React.FC<ClubContentWithFadeProps> = ({
                     upcomingEvents={upcomingEvents}
                     pastEvents={pastEvents}
                     eventAttendees={eventAttendees}
-                    userName={userName}
                   />
                 )}
                 {activeTab === 'members' && (
