@@ -69,7 +69,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = useCallback(async () => {
     setLoading(true);
-    await supabase.auth.signOut();
+    
+    // Sign out from Supabase with explicit session cleanup
+    await supabase.auth.signOut({ scope: 'global' });
+    
+    // Clear student view data from localStorage when owner signs out
+    localStorage.removeItem('attendify_clubs');
+    localStorage.removeItem('attendify_member_id'); 
+    localStorage.removeItem('owner_confirmed');
+    
+    // Force clear any remaining Supabase session data
+    localStorage.removeItem('sb-uewmgptnkldmchbkfumh-auth-token');
+    sessionStorage.removeItem('sb-uewmgptnkldmchbkfumh-auth-token');
+    
+    // Explicitly set user to null to ensure clean state
+    setUser(null);
     setSignedOut(true);
     setLoading(false);
   }, []);
