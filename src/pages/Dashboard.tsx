@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../utils/supabaseClient';
 import Layout from '../components/Layout';
 import Logo from '../components/Logo';
@@ -9,70 +8,77 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { parseLocalDate } from '../lib/utils';
 
-// Animation config for staggered entrance with blur effect
-const TAB_TRANSITION = {
-  opacity: { duration: 0.16, ease: [0.2, 0, 0.2, 1] },
-  filter: { duration: 0.28, ease: [0.2, 0, 0.2, 1] }
-};
+interface EventData {
+  id: string;
+  name: string;
+  event_date: string;
+  invite_code: string;
+  club_id: string;
+  club_name?: string;
+  club_owner?: string;
+  checkin_location_enabled?: boolean;
+  checkin_code_enabled?: boolean;
+  checkin_qr_enabled?: boolean;
+  checkin_only_during_event?: boolean;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
+  has_attended?: boolean;
+}
 
-const tabVariants = {
-  hidden: {
-    opacity: 0,
-    filter: 'blur(10px)',
-    scale: 0.97,
-    y: -10
-  },
-  visible: {
-    opacity: 1,
-    filter: 'blur(0px)',
-    scale: 1,
-    y: 0,
-    transition: {
-      ...TAB_TRANSITION,
-      type: 'spring',
-      damping: 20,
-      stiffness: 350
-    }
-  },
-  exit: {
-    opacity: 0,
-    filter: 'blur(10px)',
-    scale: 0.97,
-    y: -10,
-    transition: {
-      ...TAB_TRANSITION,
-      duration: 0.2
+interface Club {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  owner_name?: string;
+  owner_id?: string;
+  member_name?: string;
+  access_code?: string;
+}
+
+interface Member {
+  id: string;
+  name: string;
+  preapproved?: boolean;
+}
+
+interface Attendance {
+  id: string;
+  event_name: string;
+  event_date: string;
+  attended_at: string;
+  member_name: string;
+}
+
+// Helper to resolve the actual start time for an event
+const getEventStartDate = (event: EventData): Date => {
+  if (event.event_start_time) {
+    // Handle both full timestamp strings and plain time strings
+    const direct = new Date(event.event_start_time);
+    if (!isNaN(direct.getTime())) return direct;
+
+    // If only a time was provided, combine with the event date
+    if (event.event_date) {
+      const combined = new Date(`${event.event_date}T${event.event_start_time}`);
+      if (!isNaN(combined.getTime())) return combined;
     }
   }
+  return parseLocalDate(event.event_date);
 };
 
-// Add this function for the blur animation effect
-const fadeInBlurVariants = {
-  hidden: { 
-    opacity: 0,
-    filter: "blur(12px)",
-    scale: 0.98
-  },
-  visible: { 
-    opacity: 1,
-    filter: "blur(0px)",
-    scale: 1,
-    transition: {
-      opacity: { duration: 0.35, ease: [0.2, 0, 0.2, 1] },
-      filter: { duration: 0.4, ease: [0.2, 0, 0.2, 1] },
-      scale: { duration: 0.35, ease: [0.2, 0, 0.2, 1] }
-    }
-  },
-  exit: { 
-    opacity: 0,
-    filter: "blur(12px)",
-    scale: 0.98,
-    transition: {
-      opacity: { duration: 0.25, ease: [0.2, 0, 0.2, 1] },
-      filter: { duration: 0.3, ease: [0.2, 0, 0.2, 1] },
-      scale: { duration: 0.25, ease: [0.2, 0, 0.2, 1] }
-    }
-  }
+// CSS-based animations to prevent flicker
+const useStaggeredCSS = (shouldAnimate: boolean, itemCount: number) => {
+  return shouldAnimate ? 
+    Array.from({ length: itemCount }, (_, i) => ({
+      opacity: 1,
+      transition: `opacity 350ms ease-out ${i * 60}ms, transform 350ms ease-out ${i * 60}ms`,
+      transform: 'translateY(0px)'
+    })) :
+    Array.from({ length: itemCount }, () => ({
+      opacity: 0,
+      transform: 'translateY(10px)',
+      transition: 'opacity 350ms ease-out, transform 350ms ease-out'
+    }));
 };
 
 // Define subcomponents for each tab's content
@@ -80,18 +86,14 @@ const fadeInBlurVariants = {
 // Events Tab Content
 const AllEventsSection: React.FC<{ 
   loading: boolean;
-  upcomingEvents: Event[];
-  pastEvents: Event[];
+  upcomingEvents: EventData[];
+  pastEvents: EventData[];
   eventAttendees: Record<string, Member[]>;
   userName: string;
 }> = ({ loading, upcomingEvents, pastEvents, eventAttendees, userName }) => (
-  <motion.div
+  <div
     key="events"
-    variants={tabVariants}
-    initial="hidden"
-    animate="visible"
-    exit="exit"
-    className="bg-white rounded-b-2xl border border-gray-200 border-t-0 p-6"
+                    className="bg-white rounded-b-2xl border border-gray-200 border-t-0 px-3 py-6"
   >
     {loading && (
       <div className="min-h-[200px] flex items-center justify-center">
@@ -100,11 +102,8 @@ const AllEventsSection: React.FC<{
     )}
     
     {!loading && (
-      <motion.div
-        variants={fadeInBlurVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <div
+                              >
         {/* Next upcoming event highlight */}
         {upcomingEvents.length > 0 && upcomingEvents.some(e => e.has_attended) && (
           <div className="mb-6">
@@ -172,21 +171,35 @@ const AllEventsSection: React.FC<{
           eventAttendees={eventAttendees}
           userName={userName}
         />
-      </motion.div>
+      </div>
     )}
-  </motion.div>
+  </div>
 );
 
 const UpcomingEventsSection: React.FC<{
   loading: boolean;
-  upcomingEvents: Event[];
+  upcomingEvents: EventData[];
   eventAttendees: Record<string, Member[]>;
   userName: string;
-}> = ({ loading, upcomingEvents, eventAttendees, userName }) => (
-  <motion.div 
-    layout
-    className="mb-6"
-  >
+}> = ({ loading, upcomingEvents, eventAttendees, userName }) => {
+  const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
+  
+  const toggleTitle = (eventId: string) => {
+    setExpandedTitles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId);
+      } else {
+        newSet.add(eventId);
+      }
+      return newSet;
+    });
+  };
+  
+
+  
+  return (
+  <div className="mb-6">
     <div className="flex items-center gap-2 mb-5">
       <Calendar className="w-5 h-5 text-gray-700" />
       <h2 className="text-xl font-semibold text-gray-800">Upcoming Events</h2>
@@ -199,348 +212,335 @@ const UpcomingEventsSection: React.FC<{
     )}
     
     {!loading && upcomingEvents.length > 0 && (
-      <motion.div 
-        layout
-        className="space-y-4"
-        variants={{ visible: { transition: { staggerChildren: 0.07 } } }}
-        initial="hidden"
-        animate="visible"
-      >
+      <div className="space-y-4">
         {upcomingEvents
           .sort((a, b) => getEventStartDate(a).getTime() - getEventStartDate(b).getTime())
-          .map(event => {
+          .map((event, _) => {
             const eventDate = getEventStartDate(event);
             const now = new Date();
             const diffTime = eventDate.getTime() - now.getTime();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
             return (
-              <motion.div 
+              <div 
                 key={event.id} 
-                layout
-                variants={fadeInBlurVariants}
-                className={`rounded-xl border overflow-hidden transition-all ${
+                className={`relative rounded-2xl border transition-all hover:shadow-sm ${
                   event.has_attended 
                     ? 'border-black bg-black text-white' 
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
-                <div className="p-5">
-                  <div className="flex flex-col sm:flex-row justify-between gap-4">
-                    <div className="flex-grow">
-                      <div className="flex items-start gap-3">
-                        {/* Date Badge */}
-                        <div className={`hidden sm:flex flex-col items-center justify-center ${
-                          event.has_attended 
-                            ? 'bg-white bg-opacity-10 text-white' 
-                            : 'bg-white border border-gray-100'
-                          } rounded-lg p-2 w-14 h-14 text-center`}>
-                          <span className={`text-lg font-bold ${event.has_attended ? 'text-white' : 'text-gray-900'}`}>
-                            {eventDate.getDate()}
-                          </span>
-                          <span className={`text-xs ${event.has_attended ? 'text-gray-300' : 'text-gray-500'}`}>
-                            {eventDate.toLocaleString('default', { month: 'short' })}
-                          </span>
-                        </div>
-                        
-                        <div className="flex-grow">
-                          <h3 className={`font-semibold text-lg mb-1 ${event.has_attended ? 'text-white' : 'text-gray-900'}`}>
-                            {event.name}
-                          </h3>
-                          <div className={`flex items-center gap-2 text-sm mb-2.5 ${event.has_attended ? 'text-gray-300' : 'text-gray-600'}`}>
-                            <Clock className="w-4 h-4 flex-shrink-0" />
-                            <span>{eventDate.toLocaleString()}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 text-sm font-medium">
-                            <span className={`px-2.5 py-1 rounded-full text-sm ${
-                              event.has_attended
-                                ? 'bg-white bg-opacity-10 text-white' 
-                                : (diffDays > 1 
-                                  ? 'bg-gray-100 text-black' 
-                                  : diffDays === 1 
-                                    ? 'bg-gray-800 text-white'
-                                    : 'bg-black text-white')
-                            }`}>
-                              {diffDays > 1 
-                                ? `Starts in ${diffDays} days` 
-                                : diffDays === 1 
-                                  ? 'Tomorrow'
-                                  : 'Today'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                {/* Absolute Date Badge - Clean Design */}
+                <div className={`absolute top-4 left-4 rounded-lg p-2 text-center min-w-[3rem] ${
+                  event.has_attended 
+                    ? 'bg-white bg-opacity-10' 
+                    : 'bg-gray-100'
+                }`}>
+                  <div className={`text-xl font-bold ${
+                    event.has_attended ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {eventDate.getDate()}
+                  </div>
+                  <div className={`text-xs ${
+                    event.has_attended ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    {eventDate.toLocaleString('default', { month: 'short' })}
+                  </div>
+                </div>
+                
+                <div className="p-4 sm:p-6 md:p-8">
+                  <div className="flex flex-col">
+                    <div className="flex items-start justify-between gap-3 ml-16">
+                      <div className="flex-1 min-w-0">
+                      {/* Event Title */}
+                      <h3 
+                        className={`text-lg sm:text-xl md:text-2xl font-bold mb-3 leading-tight cursor-pointer transition-all ${
+                          expandedTitles.has(event.id) ? '' : 'truncate'
+                        } ${
+                          event.has_attended ? 'text-white' : 'text-gray-900'
+                        }`}
+                        onClick={() => toggleTitle(event.id)}
+                        title={event.name}
+                      >
+                        {event.name}
+                      </h3>
                       
-                      {/* Requirements/Badges Section - Redesigned */}
-                      {(event.checkin_location_enabled || event.checkin_qr_enabled || event.checkin_only_during_event) && (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {event.checkin_location_enabled && (
-                            <span className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 border ${
-                              event.has_attended 
-                                ? 'bg-white bg-opacity-10 border-white border-opacity-20 text-white' 
-                                : 'bg-gray-100 border-gray-100 text-black'
-                            }`}>
-                              <MapPin className="w-3.5 h-3.5" />
-                              Location Required
-                            </span>
-                          )}
-                          {event.checkin_qr_enabled && !event.checkin_code_enabled && (
-                            <span className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 border ${
-                              event.has_attended 
-                                ? 'bg-white bg-opacity-10 border-white border-opacity-20 text-white' 
-                                : 'bg-gray-100 border-gray-100 text-black'
-                            }`}>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h-1m-2-11a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1V5zM4 5a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM13 4a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1V5z" />
-                              </svg>
-                              QR Scan Enabled
-                            </span>
-                          )}
-                          {event.checkin_only_during_event && (
-                            <span className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 border ${
-                              event.has_attended 
-                                ? 'bg-white bg-opacity-10 border-white border-opacity-20 text-white' 
-                                : 'bg-gray-100 border-gray-100 text-black'
-                            }`}>
-                              <Clock className="w-3.5 h-3.5" />
-                              Time Restricted
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      {/* Event Date/Time - Mobile shows relative time, Desktop shows full date */}
+                      <div className={`flex items-center gap-2 text-sm mb-4 ${
+                        event.has_attended ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
+                        <Clock className="w-4 h-4" />
+                        {/* Mobile: Show relative time */}
+                        <span className="sm:hidden">
+                          {diffDays > 1 
+                            ? `Starts in ${diffDays} days` 
+                            : diffDays === 1 
+                              ? 'Tomorrow'
+                              : 'Today'}
+                        </span>
+                        {/* Desktop: Show full date/time */}
+                        <span className="hidden sm:inline">{eventDate.toLocaleString()}</span>
+                      </div>
+                    
+                    {/* Requirements - Hidden on Mobile for Cleanliness */}
+                    {(event.checkin_location_enabled || event.checkin_qr_enabled || event.checkin_only_during_event) && (
+                      <div className="hidden sm:flex flex-wrap gap-2 mb-4">
+                        {event.checkin_location_enabled && (
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
+                            event.has_attended 
+                              ? 'bg-white bg-opacity-10 text-white' 
+                              : 'bg-blue-50 text-blue-700'
+                          }`}>
+                            <MapPin className="w-3.5 h-3.5" />
+                            Location Required
+                          </span>
+                        )}
+                        {event.checkin_qr_enabled && !event.checkin_code_enabled && (
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
+                            event.has_attended 
+                              ? 'bg-white bg-opacity-10 text-white' 
+                              : 'bg-purple-50 text-purple-700'
+                          }`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h-1m-2-11a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1V5zM4 5a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM13 4a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1V5z" />
+                            </svg>
+                            QR Code
+                          </span>
+                        )}
+                        {event.checkin_only_during_event && (
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
+                            event.has_attended 
+                              ? 'bg-white bg-opacity-10 text-white' 
+                              : 'bg-amber-50 text-amber-700'
+                          }`}>
+                            <Clock className="w-3.5 h-3.5" />
+                            Time Restricted
+                          </span>
+                        )}
+                      </div>
+                    )}
+                      </div>
                     </div>
                     
-                    <div className="flex-shrink-0 mt-2 sm:mt-0 self-start sm:self-center">
+                    {/* Bottom action area - Following club detail pattern */}
+                    <div className="flex flex-row items-center justify-between text-sm mt-3">
+                      {/* Check-in button on left */}
                       {event.has_attended ? (
-                        <div className="px-4 py-2 bg-white bg-opacity-10 text-white text-sm font-medium rounded-lg flex items-center gap-2">
+                        <div className="px-4 py-2 sm:px-5 sm:py-2.5 bg-white bg-opacity-10 text-white rounded-xl font-medium text-sm flex items-center gap-2">
                           <CheckCircle className="w-4 h-4" />
-                          Checked In
+                          <span>Checked In</span>
                         </div>
                       ) : (
                         <Link 
                           to={`/checkin/${event.invite_code}`}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-all"
+                          className="px-4 py-2 sm:px-5 sm:py-2.5 bg-black text-white rounded-xl font-medium text-sm hover:bg-gray-800 transition-all duration-200 flex items-center gap-2"
                         >
-                          Check In
+                          <span>Check In</span>
                           <ArrowRight className="w-4 h-4" />
                         </Link>
                       )}
-                    </div>
-                  </div>
-                  
-                  {/* Attendees - Conditionally rendered with improved styling */}
-                  {eventAttendees[event.id] && eventAttendees[event.id].length > 0 && (
-                    <div className={`mt-4 pt-4 border-t ${event.has_attended ? 'border-white border-opacity-10' : 'border-gray-100'}`}>
-                      <div className={`flex items-center gap-1.5 text-xs mb-2 ${event.has_attended ? 'text-gray-300' : 'text-gray-500'}`}>
-                        <Users className="w-3.5 h-3.5" />
-                        <span>{eventAttendees[event.id].length} attendees so far</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {eventAttendees[event.id].slice(0, 5).map(member => (
-                          <span 
-                            key={member.id}
-                            className={`px-2.5 py-0.5 rounded-full text-xs ${
-                              event.has_attended
-                                ? (member.name === userName 
-                                  ? 'bg-white text-black' 
-                                  : 'bg-white bg-opacity-10 text-white')
-                                : (member.name === userName 
-                                  ? 'bg-black text-white' 
-                                  : 'bg-gray-100 text-gray-700')
-                            }`}
-                          >
-                            {member.name}
-                          </span>
-                        ))}
-                        {eventAttendees[event.id].length > 5 && (
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs ${
-                            event.has_attended
-                              ? 'bg-white bg-opacity-10 text-white'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            +{eventAttendees[event.id].length - 5} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-      </motion.div>
-    )}
-    
-    {!loading && upcomingEvents.length === 0 && (
-      <motion.div
-        variants={fadeInBlurVariants}
-        initial="hidden"
-        animate="visible"
-        className="text-center py-12 px-4"
-      >
-        <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500 mb-2 font-medium">No upcoming events scheduled</p>
-        <p className="text-sm text-gray-400">Check back later for new events</p>
-      </motion.div>
-    )}
-  </motion.div>
-);
-
-const PastEventsSection: React.FC<{
-  loading: boolean;
-  pastEvents: Event[];
-  eventAttendees: Record<string, Member[]>;
-  userName: string;
-}> = ({ loading, pastEvents, eventAttendees, userName }) => (
-  <motion.div 
-    layout
-    className=""
-  >
-    <div className="flex items-center gap-2 mb-5">
-      <CheckCircle className="w-5 h-5 text-gray-700" />
-      <h2 className="text-xl font-semibold text-gray-800">Past Events</h2>
-    </div>
-    
-    {loading && (
-      <div className="min-h-[200px] flex items-center justify-center">
-        <div className="opacity-0">Loading</div>
-      </div>
-    )}
-    
-    {!loading && pastEvents.length > 0 && (
-      <motion.div 
-        layout
-        className="space-y-4"
-        variants={{ visible: { transition: { staggerChildren: 0.07 } } }}
-        initial="hidden"
-        animate="visible"
-      >
-        {pastEvents.map(event => {
-          const eventDate = getEventStartDate(event);
-          const now = new Date();
-          const diffTime = now.getTime() - eventDate.getTime();
-          const daysAgo = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          
-          return (
-            <motion.div 
-              key={event.id} 
-              layout
-              variants={fadeInBlurVariants}
-              className={`rounded-xl border overflow-hidden transition-all ${ 
-                event.has_attended 
-                  ? 'border-gray-200 bg-white' 
-                  : 'border-gray-200 bg-gray-50 opacity-75'
-              }`}
-            >
-              <div className="p-5">
-                <div className="flex flex-col sm:flex-row justify-between gap-4">
-                  <div className="flex-grow">
-                    <div className="flex items-start gap-3">
-                      {/* Date Badge */}
-                      <div className="hidden sm:flex flex-col items-center justify-center bg-white rounded-lg border border-gray-100 p-2 w-14 h-14 text-center">
-                        <span className="text-lg font-bold text-gray-900">{eventDate.getDate()}</span>
-                        <span className="text-xs text-gray-500">{eventDate.toLocaleString('default', { month: 'short' })}</span>
-                      </div>
                       
-                      <div className="flex-grow">
-                        <h3 className={`font-medium text-lg mb-1 ${event.has_attended ? 'text-gray-900' : 'text-gray-600'}`}>{event.name}</h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2.5">
-                          <Clock className="w-4 h-4 flex-shrink-0" />
-                          <span>{eventDate.toLocaleString()}</span>
+                      {/* Attendee count on right */}
+                      {eventAttendees[event.id] && eventAttendees[event.id].length > 0 && (
+                        <div className={`flex items-center gap-2 mr-4 ${
+                          event.has_attended ? 'text-gray-300' : 'text-gray-500'
+                        }`}>
+                          <Users className="w-4 h-4" />
+                          <span>{eventAttendees[event.id].length} attendee{eventAttendees[event.id].length !== 1 ? 's' : ''}</span>
                         </div>
-                        
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
-                            {daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex-shrink-0 mt-2 sm:mt-0 self-start sm:self-center">
-                    {event.has_attended ? (
-                      <div className="px-4 py-2 bg-black text-white text-sm font-medium rounded-lg flex items-center gap-2 border-none">
-                        <CheckCircle className="w-4 h-4" />
-                        Attended
-                      </div>
-                    ) : (
-                      <div className="px-4 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg flex items-center gap-2 border-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        Missed
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Attendees - Conditionally rendered */}
-                {eventAttendees[event.id] && eventAttendees[event.id].length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
-                      <Users className="w-3.5 h-3.5" />
-                      <span>{eventAttendees[event.id].length} attendees</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {eventAttendees[event.id].slice(0, 5).map(member => (
-                        <span 
-                          key={member.id}
-                          className={`px-2.5 py-0.5 rounded-full text-xs ${
-                            member.name === userName 
-                              ? 'bg-black text-white' 
-                              : 'bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          {member.name}
-                        </span>
-                      ))}
-                      {eventAttendees[event.id].length > 5 && (
-                        <span className="px-2.5 py-0.5 bg-gray-100 rounded-full text-xs text-gray-700">
-                          +{eventAttendees[event.id].length - 5} more
-                        </span>
                       )}
                     </div>
                   </div>
-                )}
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
+      
+      {!loading && upcomingEvents.length === 0 && (
+        <div className="text-center py-12 px-4">
+          <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 mb-2 font-medium">No upcoming events scheduled</p>
+          <p className="text-sm text-gray-400">Check back later for new events</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PastEventsSection: React.FC<{
+  loading: boolean;
+  pastEvents: EventData[];
+  eventAttendees: Record<string, Member[]>;
+  userName: string;
+}> = ({ loading, pastEvents, eventAttendees, userName }) => {
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
+  
+  const toggleTitle = (eventId: string) => {
+    setExpandedTitles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId);
+      } else {
+        newSet.add(eventId);
+      }
+      return newSet;
+    });
+  };
+  
+  useEffect(() => {
+    if (!loading && pastEvents.length > 0) {
+      requestAnimationFrame(() => setShouldAnimate(true));
+    }
+  }, [loading, pastEvents.length]);
+  
+  const eventStyles = useStaggeredCSS(shouldAnimate, pastEvents.length);
+  
+  return (
+    <div className="">
+      <div className="flex items-center gap-2 mb-5">
+        <CheckCircle className="w-5 h-5 text-gray-700" />
+        <h2 className="text-xl font-semibold text-gray-800">Past Events</h2>
+      </div>
+      
+      {loading && (
+        <div className="min-h-[200px] flex items-center justify-center">
+          <div className="opacity-0">Loading</div>
+        </div>
+      )}
+      
+      {!loading && pastEvents.length > 0 && (
+        <div className="space-y-4">
+          {pastEvents.map((event, index) => {
+            const eventDate = getEventStartDate(event);
+            const now = new Date();
+            const diffTime = now.getTime() - eventDate.getTime();
+            const daysAgo = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            return (
+              <div 
+                key={event.id}
+                style={eventStyles[index] || {}}
+                className={`relative rounded-2xl border transition-all will-change-transform hover:shadow-sm ${ 
+                  event.has_attended 
+                    ? 'border-gray-200 bg-white' 
+                    : 'border-gray-200 bg-gray-50 opacity-75'
+                }`}
+              >
+                {/* Absolute Date Badge */}
+                <div className="absolute top-4 left-4 bg-gray-100 rounded-lg p-2 text-center min-w-[3rem]">
+                  <div className="text-xl font-bold text-gray-900">
+                    {eventDate.getDate()}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {eventDate.toLocaleString('default', { month: 'short' })}
+                  </div>
+                </div>
+                
+                <div className="p-4 sm:p-6 md:p-8">
+                  <div className="flex flex-col">
+                    <div className="flex items-start justify-between gap-3 ml-16">
+                      <div className="flex-1 min-w-0">
+                        <h3 
+                          className={`text-lg sm:text-xl md:text-2xl font-bold cursor-pointer transition-all ${
+                            expandedTitles.has(event.id) ? '' : 'truncate'
+                          } ${
+                            event.has_attended ? 'text-gray-900' : 'text-gray-600'
+                          }`}
+                          onClick={() => toggleTitle(event.id)}
+                          title={event.name}
+                        >
+                          {event.name}
+                        </h3>
+                        <p className="text-sm sm:text-base text-gray-500 mt-1">
+                          {/* Mobile: Show relative time */}
+                          <span className="sm:hidden">
+                            {daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`}
+                          </span>
+                          {/* Desktop: Show full date/time */}
+                          <span className="hidden sm:inline">{eventDate.toLocaleString()}</span>
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Bottom action area - Following club detail pattern */}
+                    <div className="flex flex-row items-center justify-between text-sm mt-3">
+                      {/* Status badge on left */}
+                      {event.has_attended ? (
+                        <div className="px-4 py-2 sm:px-5 sm:py-2.5 bg-black text-white rounded-xl font-medium text-sm flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Attended</span>
+                        </div>
+                      ) : (
+                        <div className="px-4 py-2 sm:px-5 sm:py-2.5 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          <span>Missed</span>
+                        </div>
+                      )}
+                      
+                      {/* Attendee count on right */}
+                      {eventAttendees[event.id] && eventAttendees[event.id].length > 0 && (
+                        <div className="flex items-center gap-2 text-gray-500 mr-4">
+                          <Users className="w-4 h-4" />
+                          <span>{eventAttendees[event.id].length} attendee{eventAttendees[event.id].length !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </motion.div>
-          );
-        })}
-      </motion.div>
-    )}
-    
-    {!loading && pastEvents.length === 0 && (
-      <motion.div
-        variants={fadeInBlurVariants}
-        initial="hidden"
-        animate="visible"
-        className="text-center py-12 px-4"
-      >
-        <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500 mb-2 font-medium">No past events</p>
-        <p className="text-sm text-gray-400">
-          Once you attend events, they'll appear here
-        </p>
-      </motion.div>
-    )}
-  </motion.div>
-);
+            );
+          })}
+        </div>
+      )}
+      
+      {!loading && pastEvents.length === 0 && (
+        <div
+          className="text-center py-12 px-4"
+          style={{
+            opacity: shouldAnimate ? 1 : 0,
+            transition: 'opacity 300ms ease-out 200ms'
+          }}
+        >
+          <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 mb-2 font-medium">No past events</p>
+          <p className="text-sm text-gray-400">
+            Once you attend events, they'll appear here
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Members Tab Content
 const MembersSection: React.FC<{ 
   loading: boolean;
   members: Member[];
   userName: string;
-}> = ({ loading, members, userName }) => (
-  <motion.div
-    key="members"
-    variants={tabVariants}
-    initial="hidden"
-    animate="visible"
-    exit="exit"
-    className="bg-white rounded-b-2xl border border-gray-200 border-t-0 p-6"
+}> = ({ loading, members, userName }) => {
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  
+  useEffect(() => {
+    if (!loading) {
+      requestAnimationFrame(() => setShouldAnimate(true));
+    }
+  }, [loading]);
+  
+  const memberStyles = useStaggeredCSS(shouldAnimate, members.length);
+  
+  return (
+  <div
+    className="bg-white rounded-b-2xl border border-gray-200 border-t-0 px-3 py-6"
+    style={{
+      opacity: shouldAnimate ? 1 : 0,
+      transform: shouldAnimate ? 'translateY(0px)' : 'translateY(10px)',
+      transition: 'opacity 300ms ease-out, transform 300ms ease-out'
+    }}
   >
     <div className="flex items-center gap-2 mb-5">
       <Users className="w-5 h-5 text-gray-700" />
@@ -554,11 +554,7 @@ const MembersSection: React.FC<{
     )}
     
     {!loading && members.length > 0 && (
-      <motion.div
-        variants={fadeInBlurVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <div>
         <div className="bg-gray-50 rounded-lg px-4 py-3 mb-5 border border-gray-200 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-gray-700">
             <span className="font-medium">{members.length}</span> member{members.length !== 1 ? 's' : ''} in this club
@@ -569,14 +565,11 @@ const MembersSection: React.FC<{
           </div>
         </div>
         
-        <motion.div 
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
-          variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
-        >
-          {members.map(member => (
-            <motion.div 
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {members.map((member, index) => (
+            <div 
               key={member.id}
-              variants={fadeInBlurVariants}
+              style={memberStyles[index] || {}}
               className={`p-4 rounded-lg ${
                 member.name === userName
                   ? 'bg-black text-white' 
@@ -606,42 +599,49 @@ const MembersSection: React.FC<{
                   )}
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     )}
     
     {!loading && members.length === 0 && (
-      <motion.div
-        variants={fadeInBlurVariants}
-        initial="hidden"
-        animate="visible"
-        className="text-center py-12 px-4"
+      <div
+                                className="text-center py-12 px-4"
       >
         <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
         <p className="text-gray-500 mb-2 font-medium">No members found</p>
         <p className="text-sm text-gray-400">
           Members will appear here once they join
         </p>
-      </motion.div>
+      </div>
     )}
-  </motion.div>
-);
+  </div>
+  );
+};
 
 // Attendance Tab Content
 const AttendanceSection: React.FC<{ 
   loading: boolean;
   records: Attendance[];
   ownerPreviewMode?: boolean;
-}> = ({ loading, records, ownerPreviewMode }) => (
-  <motion.div
-    key="attendance"
-    variants={tabVariants}
-    initial="hidden"
-    animate="visible"
-    exit="exit"
-    className="bg-white rounded-b-2xl border border-gray-200 border-t-0 p-6"
+}> = ({ loading, records, ownerPreviewMode }) => {
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  
+  useEffect(() => {
+    if (!loading) {
+      requestAnimationFrame(() => setShouldAnimate(true));
+    }
+  }, [loading]);
+  
+  return (
+  <div
+    className="bg-white rounded-b-2xl border border-gray-200 border-t-0 px-3 py-6"
+    style={{
+      opacity: shouldAnimate ? 1 : 0,
+      transform: shouldAnimate ? 'translateY(0px)' : 'translateY(10px)',
+      transition: 'opacity 300ms ease-out, transform 300ms ease-out'
+    }}
   >
     <div className="flex items-center gap-2 mb-5">
       <BarChart3 className="w-5 h-5 text-gray-700" />
@@ -658,11 +658,8 @@ const AttendanceSection: React.FC<{
         <div className="opacity-0">Loading</div>
       </div>
     ) : records.length > 0 ? (
-      <motion.div
-        variants={fadeInBlurVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <div
+                              >
         {/* Attendance Summary Card */}
         <div className="mb-6 p-5 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="font-semibold mb-4 flex items-center gap-2 text-gray-800">
@@ -749,110 +746,22 @@ const AttendanceSection: React.FC<{
             ))}
           </div>
         </div>
-      </motion.div>
+      </div>
     ) : (
-      <motion.div
-        variants={fadeInBlurVariants}
-        initial="hidden"
-        animate="visible"
-        className="text-center py-12 px-4"
+      <div
+                                className="text-center py-12 px-4"
       >
         <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
         <p className="text-gray-500 mb-2 font-medium">No attendance records yet</p>
         <p className="text-sm text-gray-400">
           Check in to events to start building your attendance history
         </p>
-      </motion.div>
+      </div>
     )}
-  </motion.div>
-);
-
-// Add cross-fade transition effect for club switching
-const crossFadeVariants = {
-  initial: { 
-    opacity: 0,
-    filter: "blur(12px)",
-    scale: 0.98
-  },
-  animate: { 
-    opacity: 1,
-    filter: "blur(0px)",
-    scale: 1,
-    transition: {
-      opacity: { duration: 0.4, ease: [0.2, 0, 0.2, 1] },
-      filter: { duration: 0.5, ease: [0.2, 0, 0.2, 1] },
-      scale: { duration: 0.45, ease: [0.2, 0, 0.2, 1] }
-    }
-  },
-  exit: { 
-    opacity: 0,
-    filter: "blur(12px)",
-    scale: 0.98,
-    transition: {
-      opacity: { duration: 0.25, ease: [0.2, 0, 0.2, 1] },
-      filter: { duration: 0.3, ease: [0.2, 0, 0.2, 1] },
-      scale: { duration: 0.25, ease: [0.2, 0, 0.2, 1] }
-    }
-  }
+  </div>
+  );
 };
 
-interface Event {
-  id: string;
-  name: string;
-  event_date: string;
-  invite_code: string;
-  club_id: string;
-  club_name?: string;
-  club_owner?: string;
-  checkin_location_enabled?: boolean;
-  checkin_code_enabled?: boolean;
-  checkin_qr_enabled?: boolean;
-  checkin_only_during_event?: boolean;
-  event_start_time?: string | null;
-  event_end_time?: string | null;
-  has_attended?: boolean;
-}
-
-interface Club {
-  id: string;
-  name: string;
-  description?: string;
-  category?: string;
-  owner_name?: string;
-  owner_id?: string;
-  member_name?: string;
-  access_code?: string;
-}
-
-interface Member {
-  id: string;
-  name: string;
-  preapproved?: boolean;
-}
-
-// Helper to resolve the actual start time for an event
-const getEventStartDate = (event: Event): Date => {
-  if (event.event_start_time) {
-    // Handle both full timestamp strings and plain time strings
-    const direct = new Date(event.event_start_time);
-    if (!isNaN(direct.getTime())) return direct;
-
-    // If only a time was provided, combine with the event date
-    if (event.event_date) {
-      const combined = new Date(`${event.event_date}T${event.event_start_time}`);
-      if (!isNaN(combined.getTime())) return combined;
-    }
-  }
-  return parseLocalDate(event.event_date);
-};
-
-interface Attendance {
-  id: string;
-  event_name: string;
-  event_date: string;
-  attended_at: string;
-  member_name: string;
-}
 
 interface ClubContentWithFadeProps {
   selectedClubId: string | null;
@@ -863,8 +772,8 @@ interface ClubContentWithFadeProps {
   handleClubChange: (clubId: string) => void;
   setActiveTab: React.Dispatch<React.SetStateAction<'events' | 'members' | 'attendance'>>;
   loadingEvents: boolean;
-  upcomingEvents: Event[];
-  pastEvents: Event[];
+  upcomingEvents: EventData[];
+  pastEvents: EventData[];
   eventAttendees: Record<string, Member[]>;
   loadingMembers: boolean;
   clubMembers: Member[];
@@ -899,32 +808,25 @@ const ClubContentWithFade: React.FC<ClubContentWithFadeProps> = ({
     
   // Only key the outer container by selectedClubId, not by activeTab
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
+    <div>
+      <div
         key={selectedClubId || 'none'}
-        variants={crossFadeVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-      >
+                                      >
         {/* Welcome header with student name - Updated with monochrome design */}
-        <motion.div
-          initial={{ opacity: 0, y: -10, filter: 'blur(14px)' }}
-          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-6 sm:mb-8 bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 md:p-8"
+        <div
+          className="mb-4 sm:mb-6 md:mb-8 bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 md:p-6 lg:p-8"
         >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">Welcome, <CharFadeIn text={userName + "!"} speed={1.2} gradient={false} /></h1>
-              <p className="text-gray-600">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-black mb-1 sm:mb-2">Welcome, <CharFadeIn text={userName + "!"} speed={1.2} gradient={false} /></h1>
+              <p className="text-sm sm:text-base text-gray-600">
                 {userClubs.length === 1 
                   ? `Ready to engage with your club?` 
                   : `Select a club from the dropdown below.`}
               </p>
             </div>
             {userClubs.length > 1 && (
-              <div className="relative w-full md:w-64">
+              <div className="relative w-full md:w-64 flex-shrink-0">
                 <label htmlFor="club-select" className="block text-sm font-medium text-gray-700 mb-1">
                   Your Clubs
                 </label>
@@ -933,7 +835,7 @@ const ClubContentWithFade: React.FC<ClubContentWithFadeProps> = ({
                     id="club-select"
                     value={selectedClubId || ''}
                     onChange={(e) => handleClubChange(e.target.value)}
-                    className="block w-full px-4 py-2.5 text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black appearance-none"
+                    className="block w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-black bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black appearance-none"
                   >
                     {userClubs.map(club => (
                       <option key={club.id} value={club.id}>
@@ -942,7 +844,7 @@ const ClubContentWithFade: React.FC<ClubContentWithFadeProps> = ({
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path
                         fillRule="evenodd"
                         d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -954,12 +856,12 @@ const ClubContentWithFade: React.FC<ClubContentWithFadeProps> = ({
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
         {/* Club content with smooth transitions */}
         {selectedClub && (
           <div className="mb-6 sm:mb-8">
             {/* Updated Tab Navigation - More seamless design */}
-            <div className="flex flex-wrap rounded-t-2xl bg-white border border-gray-200 border-b-0 mb-0">
+            <div className="flex rounded-t-2xl bg-white border border-gray-200 border-b-0 mb-0 overflow-x-auto">
               {[ 
                 { key: 'events', label: 'Events', icon: <Calendar className="w-4 h-4" /> }, 
                 { key: 'members', label: 'Members', icon: <Users className="w-4 h-4" /> }, 
@@ -968,28 +870,25 @@ const ClubContentWithFade: React.FC<ClubContentWithFadeProps> = ({
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as 'events' | 'members' | 'attendance')}
-                  className={`flex items-center gap-1.5 px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-medium transition-all flex-grow sm:flex-grow-0 justify-center sm:justify-start ${
+                  className={`flex items-center gap-1.5 px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all whitespace-nowrap min-w-0 flex-1 sm:flex-initial justify-center ${
                     activeTab === tab.key 
                       ? 'bg-white text-black border-b-2 border-black' 
                       : 'hover:bg-gray-50 text-gray-500 hover:text-black'
                   }`}
                 >
                   {tab.icon}
-                  <span className="ml-1">{tab.label}</span>
+                  <span className="ml-1 hidden xs:inline sm:inline">{tab.label}</span>
+                  <span className="ml-1 xs:hidden sm:hidden">{tab.key === 'events' ? 'Events' : tab.key === 'members' ? 'Members' : 'Records'}</span>
                 </button>
               ))}
             </div>
             
             {/* Tab content using AnimatePresence and subcomponents - Using key={activeTab} for targeted cross-fade */}
-            <AnimatePresence mode="wait">
-              <motion.div 
+            <div>
+              <div 
                 key={activeTab}
-                variants={tabVariants}
-                initial="hidden"
-                // Animate once on mount, keep visible during subsequent loads
-                animate="visible"
-                exit="exit"
-                className="relative"
+                                                // Animate once on mount, keep visible during subsequent loads
+                                                className="relative"
               >
                 {/* Loading overlay */}
                 {isCurrentTabLoading && (
@@ -1021,12 +920,12 @@ const ClubContentWithFade: React.FC<ClubContentWithFadeProps> = ({
                     ownerPreviewMode={ownerPreviewMode}
                   />
                 )}
-              </motion.div>
-            </AnimatePresence>
+              </div>
+            </div>
           </div>
         )}
-      </motion.div>
-    </AnimatePresence>
+      </div>
+    </div>
   );
 };
 
@@ -1095,8 +994,8 @@ const Dashboard: React.FC = () => {
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
   const [userName, setUserName] = useState<string>('');
   
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
-  const [pastEvents, setPastEvents] = useState<Event[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventData[]>([]);
+  const [pastEvents, setPastEvents] = useState<EventData[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   
   const [userClubs, setUserClubs] = useState<Club[]>([]);
@@ -1510,7 +1409,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto p-3 sm:p-5 md:p-6">
+      <div className="max-w-6xl mx-auto p-3 sm:p-4 md:p-5 lg:p-6">
           {/* LOADING STATE: Show spinner and debug info */}
           {authLoading ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
@@ -1525,48 +1424,39 @@ const Dashboard: React.FC = () => {
           ) : 
           /* NO CLUBS VIEW: Show when loadingClubs is false and userClubs is empty */
           userClubs.length === 0 ? (
-            <motion.div
-              variants={fadeInBlurVariants}
-              initial="hidden"
-              animate="visible"
-              className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 text-center"
-            >
-              <ClipboardList className="w-16 h-16 text-gray-300 mx-auto mb-6" strokeWidth={1} />
-              <h2 className="text-xl font-semibold mb-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 md:p-8 text-center">
+              <ClipboardList className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4 sm:mb-6" strokeWidth={1} />
+              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">
                 {isAuthenticatedCreator() ? `Hi ${getCreatorNameText()}, you haven't joined any clubs yet!` : 'Welcome to Attendify'}
               </h2>
               {isAuthenticatedCreator() ? (
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto">
                   Join a club as a student to see this view populated, any club you join will treat you like a student, or preview how students will see your owned clubs.
                 </p>
               ) : (
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-md mx-auto">
                   You're not a member of any clubs yet. Join a club to track your attendance and connect with other members.
                 </p>
               )}
-              <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-                <motion.button
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4">
+                <button
                   onClick={() => navigate('/join')}
-                  className="w-full sm:w-auto px-5 py-2 bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all flex items-center justify-center gap-2"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
+                  className="w-full sm:w-auto px-4 sm:px-5 py-2 bg-black text-white font-medium rounded-lg hover:bg-gray-900 transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
+                                                    >
                   <PlusCircle className="w-4 h-4" />
                   Join a Club
-                </motion.button>
+                </button>
                 {isAuthenticatedCreator() && (
-                  <motion.button
+                  <button
                     onClick={loadOwnedClubsAsStudent}
-                    className="w-full sm:w-auto px-5 py-2 bg-white text-black border border-gray-300 font-medium rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                  >
+                    className="w-full sm:w-auto px-4 sm:px-5 py-2 bg-white text-black border border-gray-300 font-medium rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
+                                                          >
                     <Users className="w-4 h-4" /> 
                     View Your Clubs as Student
-                  </motion.button>
+                  </button>
                 )}
               </div>
-            </motion.div>
+            </div>
           ) : (
             <>
               {/* Welcome header with student name - Updated with monochrome design */}

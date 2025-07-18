@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 
@@ -17,6 +17,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [signedOut, setSignedOut] = useState(false);
+  
+  // Memoize the user object to prevent unnecessary re-renders when the user data is identical
+  const stableUser = useMemo(() => {
+    return user;
+  }, [user?.id, user?.email, user?.created_at]); // Only change when key properties change
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -39,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [signedOut, navigate]);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string) => {
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (data.user) {
@@ -53,24 +58,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setLoading(false);
     return { data, error };
-  };
+  }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     return { data, error };
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     setLoading(true);
     await supabase.auth.signOut();
     setSignedOut(true);
     setLoading(false);
-  };
+  }, []);
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    user: stableUser,
+    loading,
+    signUp,
+    signIn,
+    signOut
+  }), [stableUser, loading]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

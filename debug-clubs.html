@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clubs Page Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            max-width: 300px;
+            z-index: 9999;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .debug-log {
+            margin: 5px 0;
+            padding: 3px;
+            border-radius: 3px;
+        }
+        
+        .render-log {
+            background-color: #e3f2fd;
+        }
+        
+        .state-log {
+            background-color: #f3e5f5;
+        }
+        
+        .animation-log {
+            background-color: #e8f5e8;
+        }
+        
+        .error-log {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        #app-container {
+            margin-right: 320px;
+        }
+        
+        /* Mock skeleton styles */
+        .skeleton-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+            animation: pulse 2s infinite;
+        }
+        
+        .skeleton-line {
+            height: 16px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        
+        .skeleton-line.wide { width: 60%; }
+        .skeleton-line.medium { width: 80%; }
+        .skeleton-line.narrow { width: 40%; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Mock club card styles */
+        .club-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e0e0e0;
+            padding: 24px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0;
+        }
+        
+        .club-card.visible {
+            opacity: 1;
+        }
+        
+        .club-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .club-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .club-description {
+            color: #666;
+            margin-bottom: 16px;
+        }
+        
+        .club-meta {
+            font-size: 14px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-panel">
+        <h3>Debug Log</h3>
+        <div id="debug-logs"></div>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+    
+    <div id="app-container">
+        <h1>Clubs Page Debug Test</h1>
+        <div id="clubs-container"></div>
+    </div>
+
+    <script>
+        let startTime = Date.now();
+        let renderCount = 0;
+        let logs = [];
+        
+        function addLog(message, type = 'render') {
+            const timestamp = Date.now() - startTime;
+            const logEntry = `[${timestamp}ms] ${message}`;
+            logs.push({ message: logEntry, type });
+            
+            console.log(logEntry);
+            
+            const logsContainer = document.getElementById('debug-logs');
+            const logDiv = document.createElement('div');
+            logDiv.className = `debug-log ${type}-log`;
+            logDiv.textContent = logEntry;
+            logsContainer.appendChild(logDiv);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+        
+        function clearLogs() {
+            logs = [];
+            document.getElementById('debug-logs').innerHTML = '';
+            startTime = Date.now();
+            renderCount = 0;
+        }
+        
+        // Mock club data
+        const mockClubs = [
+            {
+                id: '1',
+                name: 'Computer Science Club',
+                description: 'A community for students passionate about programming and technology.',
+                category: 'Academic',
+                access_code: 'CS2024'
+            },
+            {
+                id: '2', 
+                name: 'Drama Society',
+                description: 'Express yourself through acting and theatrical performances.',
+                category: 'Arts',
+                access_code: 'DRAMA24'
+            },
+            {
+                id: '3',
+                name: 'Environmental Club',
+                description: 'Working together to create a more sustainable future.',
+                category: 'Service',
+                access_code: 'GREEN24'
+            },
+            {
+                id: '4',
+                name: 'Chess Club',
+                description: 'Strategic thinking and competitive chess matches.',
+                category: 'Games',
+                access_code: 'CHESS24'
+            }
+        ];
+        
+        // Simulate the loading states
+        function simulateLoadingFlow() {
+            addLog('Starting page load simulation', 'state');
+            const container = document.getElementById('clubs-container');
+            
+            // Phase 1: Show skeleton loading
+            addLog('Phase 1: Rendering skeleton loading', 'render');
+            container.innerHTML = '';
+            for (let i = 0; i < 4; i++) {
+                const skeleton = document.createElement('div');
+                skeleton.className = 'skeleton-card';
+                skeleton.innerHTML = `
+                    <div class="skeleton-line wide"></div>
+                    <div class="skeleton-line medium"></div>
+                    <div class="skeleton-line narrow"></div>
+                `;
+                container.appendChild(skeleton);
+            }
+            renderCount++;
+            addLog(`Render #${renderCount}: Skeleton cards added`, 'render');
+            
+            // Phase 2: Simulate API delay
+            setTimeout(() => {
+                addLog('Phase 2: API response received, preparing to render clubs', 'state');
+                
+                // Phase 3: Render invisible clubs (this is where flicker might occur)
+                addLog('Phase 3: Rendering invisible club cards', 'render');
+                container.innerHTML = '';
+                
+                mockClubs.forEach((club, index) => {
+                    const clubCard = document.createElement('div');
+                    clubCard.className = 'club-card';
+                    clubCard.innerHTML = `
+                        <div class="club-title">${club.name}</div>
+                        <div class="club-description">${club.description}</div>
+                        <div class="club-meta">Category: ${club.category} | Code: ${club.access_code}</div>
+                    `;
+                    container.appendChild(clubCard);
+                });
+                renderCount++;
+                addLog(`Render #${renderCount}: Club cards added (invisible)`, 'render');
+                
+                // Phase 4: Trigger animation using requestAnimationFrame
+                requestAnimationFrame(() => {
+                    addLog('Phase 4: requestAnimationFrame triggered - starting animation', 'animation');
+                    
+                    const cards = container.querySelectorAll('.club-card');
+                    cards.forEach((card, index) => {
+                        setTimeout(() => {
+                            addLog(`Animating card ${index + 1}`, 'animation');
+                            card.classList.add('visible');
+                        }, index * 80); // 80ms stagger delay
+                    });
+                    
+                    renderCount++;
+                    addLog(`Render #${renderCount}: Animation started`, 'animation');
+                });
+                
+            }, 1500); // Simulate 1.5s API delay
+        }
+        
+        // Monitor for any unexpected re-renders
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                    addLog(`DOM mutation detected: ${mutation.type}`, 'render');
+                }
+            });
+        });
+        
+        // Start monitoring when page loads
+        window.addEventListener('load', () => {
+            addLog('Page loaded, starting observation', 'state');
+            observer.observe(document.getElementById('clubs-container'), {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'style']
+            });
+            
+            // Start the simulation
+            setTimeout(() => {
+                simulateLoadingFlow();
+            }, 500);
+        });
+        
+        // Additional performance monitoring
+        if ('PerformanceObserver' in window) {
+            const perfObserver = new PerformanceObserver((list) => {
+                for (const entry of list.getEntries()) {
+                    if (entry.entryType === 'paint') {
+                        addLog(`${entry.name}: ${entry.startTime.toFixed(2)}ms`, 'render');
+                    }
+                }
+            });
+            perfObserver.observe({ entryTypes: ['paint'] });
+        }
+        
+        addLog('Debug test initialized', 'state');
+    </script>
+</body>
+</html>
