@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import Logo from './Logo';
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/react"
+import { Menu } from 'lucide-react'
+import { Popover, PopoverTrigger, PopoverContent } from './ui/popover'
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,9 +17,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
 
+  const [menuOpen, setMenuOpen] = useState(false)
+
   const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+    return location.pathname === path
+  }
 
   const handleSignOut = async () => {
     await signOut();
@@ -41,56 +45,63 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       >
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
           <Link to="/" className="mr-6 flex-shrink-0">
-            <Logo 
-              textClassName="text-3xl" 
-              imageClassName="w-8 h-8" /* Slightly larger image */ 
+            <Logo
+              textClassName="text-3xl"
+              imageClassName="w-8 h-8"
               size={30}
             />
           </Link>
-          
-          <div className="flex items-center space-x-4">
-            {/* Owner links when logged in */}
+
+          {/* Mobile menu */}
+          <div className="flex items-center md:hidden">
+            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+              <PopoverTrigger asChild>
+                <button className="p-2 text-gray-700" aria-label="Menu">
+                  <Menu className="w-6 h-6" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-48 p-2 space-y-1" >
+                {user ? (
+                  <div className="flex flex-col">
+                    <Link to="/dashboard" className={navLinkClasses('/dashboard')}>Student View</Link>
+                    <Link to="/clubs" className={navLinkClasses('/clubs')}>My Clubs</Link>
+                    <Link to="/profile" className={navLinkClasses('/profile')}>Settings</Link>
+                    <button onClick={handleSignOut} className="text-left px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-black transition-colors">Sign Out</button>
+                  </div>
+                ) : !loading ? (
+                  <div className="flex flex-col">
+                    <Link to="/" className={navLinkClasses('/')}>Home</Link>
+                    <Link to="/join" className={navLinkClasses('/join')}>Join Club</Link>
+                    <Link to="/attend" className={navLinkClasses('/attend')}>Check In</Link>
+                    <Link to="/login" className="px-3 py-1.5 text-sm font-medium bg-black text-white rounded-md hover:bg-gray-800 transition-colors">Owner Login</Link>
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-400">Loading...</span>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Desktop links */}
+          <div className="hidden md:flex items-center space-x-4">
             {user && (
               <>
-                <Link to="/dashboard" className={navLinkClasses('/dashboard')}>
-                  Student View
-                </Link>
-                <Link to="/clubs" className={navLinkClasses('/clubs')}>
-                  My Clubs
-                </Link>
-                <Link to="/profile" className={navLinkClasses('/profile')}>
-                  Settings
-                </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-black transition-colors"
-                >
-                  Sign Out
-                </button>
+                <Link to="/dashboard" className={navLinkClasses('/dashboard')}>Student View</Link>
+                <Link to="/clubs" className={navLinkClasses('/clubs')}>My Clubs</Link>
+                <Link to="/profile" className={navLinkClasses('/profile')}>Settings</Link>
+                <button onClick={handleSignOut} className="px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-black transition-colors">Sign Out</button>
               </>
             )}
-            
-            {/* Minimal links when logged out or not owner */}
+
             {!user && !loading && (
               <>
-                <Link to="/" className={navLinkClasses('/')}>
-                  Home
-                </Link>
-                <Link to="/join" className={navLinkClasses('/join')}>
-                  Join Club
-                </Link>
-                <Link to="/attend" className={navLinkClasses('/attend')}>
-                  Check In
-                </Link>
-                <Link 
-                  to="/login"
-                  className="ml-4 px-3 py-1.5 text-sm font-medium bg-black text-white rounded-md hover:bg-gray-800 transition-colors"
-                >
-                  Owner Login
-                </Link>
+                <Link to="/" className={navLinkClasses('/')}>Home</Link>
+                <Link to="/join" className={navLinkClasses('/join')}>Join Club</Link>
+                <Link to="/attend" className={navLinkClasses('/attend')}>Check In</Link>
+                <Link to="/login" className="ml-4 px-3 py-1.5 text-sm font-medium bg-black text-white rounded-md hover:bg-gray-800 transition-colors">Owner Login</Link>
               </>
             )}
-            
+
             {loading && (
               <span className="text-sm text-gray-400">Loading...</span>
             )}
@@ -107,4 +118,4 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 };
 
-export default Layout; 
+export default Layout;
