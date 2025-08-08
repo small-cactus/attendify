@@ -1,10 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Home from './Home';
 
 const Entry: React.FC = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  const [showHome, setShowHome] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -15,7 +18,7 @@ const Entry: React.FC = () => {
       if (clubs.length > 0) {
         navigate('/dashboard', { replace: true });
       } else {
-        navigate('/welcome', { replace: true });
+        setShowHome(true);
       }
     } else {
       if (clubs.length > 0 && !localStorage.getItem('owner_confirmed')) {
@@ -25,6 +28,10 @@ const Entry: React.FC = () => {
       }
     }
   }, [user, loading, navigate]);
+
+  if (showHome) {
+    return <Home />;
+  }
 
   return null;
 };
