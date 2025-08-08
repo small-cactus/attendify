@@ -64,7 +64,7 @@
 @layer components {
   .hero-text {
     @apply text-5xl sm:text-6xl md:text-7xl font-semibold tracking-tight;
-    background: linear-gradient(to right, #1d1d1f, #424245);
+    background: linear-gradient(to right, #0a0a0a, #3e3e3e);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     line-height: 1.25 !important;
@@ -79,7 +79,7 @@
   }
   
   .feature-card {
-    @apply p-8 hover:scale-[1.02] transition-all duration-300 ease-out;
+    @apply p-8 transition-all duration-300 ease-out hover:-translate-y-1;
   }
   
   .primary-button {
