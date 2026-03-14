@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
-import { supabase } from '../utils/supabaseClient';
+import { supabase, supabaseAuthStorageKey } from '../utils/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
@@ -79,8 +79,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('owner_confirmed');
     
     // Force clear any remaining Supabase session data
-    localStorage.removeItem('sb-uewmgptnkldmchbkfumh-auth-token');
-    sessionStorage.removeItem('sb-uewmgptnkldmchbkfumh-auth-token');
+    localStorage.removeItem(supabaseAuthStorageKey);
+    sessionStorage.removeItem(supabaseAuthStorageKey);
     
     // Explicitly set user to null to ensure clean state
     setUser(null);
