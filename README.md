@@ -1,78 +1,145 @@
 # Attendify
 
 <p align="center">
-  <img src="public/attendify-favicon.png" alt="Attendify app icon" width="140" />
+  <img src="src/assets/attendify-logo.png" alt="Attendify logo" width="220" />
 </p>
 
-Attendify is a React + TypeScript web application for club management and event attendance. It combines owner-facing club administration with member/public join and check-in flows, all inside a single routed SPA backed by Supabase.
+<p align="center">
+  Club administration, member onboarding, and event check-in in one React and Supabase application.
+</p>
 
-## Repository Layout
+## Quick Start
 
-- `src/App.tsx` defines the route structure for owner, member, and public flows.
-- `src/pages/` contains the main product surfaces: entry routing, login, clubs, club detail, profile, join flows, dashboard, and event check-in pages.
-- `src/contexts/AuthContext.tsx` manages Supabase session state and sign-in/sign-up/sign-out behavior.
-- `src/utils/supabaseClient.ts` initializes the Supabase client from Vite environment variables.
-- `src/utils/dbMigrations.ts` contains application-side migration/setup logic that attempts to prepare required database behavior at runtime.
-- `src/components/` contains the reusable UI and workflow pieces such as layout, create-club/event modals, maps, date/time selection, and debug UI.
-- `database_schema.json` and `db_migration.sql` provide schema and migration reference material.
+1. Create your local environment file.
 
-## Application Model
+   ```bash
+   cp .env.example .env
+   ```
 
-Attendify is not split into separate apps for admins and members. Instead, one React Router application handles multiple user states:
+2. Add your Supabase project values.
 
-- unauthenticated visitors
-- authenticated club owners
-- local-storage-backed club members
-- event check-in visitors using invite codes or QR links
+   ```bash
+   VITE_SUPABASE_URL=
+   VITE_SUPABASE_ANON_KEY=
+   ```
 
-The root `Entry` page decides where to send a user based on two things:
+3. Install dependencies.
 
-- whether a Supabase-authenticated owner session exists
-- whether local club membership data already exists in `localStorage`
+   ```bash
+   npm ci
+   ```
 
-That means the app is using both remote auth state and client-side persisted membership state to determine the user’s path through the product.
+4. Start the app.
 
-## Main Flows
+   ```bash
+   npm start
+   ```
 
-### 1. Club owner flow
+5. Open the local Vite URL shown in the terminal.
 
-Authenticated owners are routed into the owner experience:
+## What This Project Does
 
-- `/clubs` lists clubs owned by the current user
-- owners can create clubs and related records through Supabase inserts
-- club detail and QR-related routes support join/check-in entry points
-- owner auth is managed through `AuthContext` and Supabase auth APIs
+Attendify is a single-page web app for running clubs and tracking attendance without splitting the product into separate admin and participant applications. The same frontend handles:
 
-`src/pages/Clubs.tsx` shows that owner club membership is resolved through the `club_owners` table and then expanded into club records.
+- club owner authentication and administration
+- member join flows driven by invite codes
+- member dashboards backed by local browser state
+- event check-in links and QR entry points
+- attendance rules such as event windows and location-aware validation
 
-### 2. Member / participant flow
+The codebase is organized so the route a user sees depends on their role and on the state already stored in the browser.
 
-Members are not modeled only as a traditional authenticated user session. The app also stores membership information locally:
+## Quick Architecture
 
-- `attendify_clubs`
-- `attendify_member_id`
-- `owner_confirmed`
+| Path | Purpose |
+| --- | --- |
+| `src/App.tsx` | Top-level route map for owner, member, and public entry points |
+| `src/pages/Entry.tsx` | First-route decision layer that redirects users into the correct flow |
+| `src/contexts/AuthContext.tsx` | Supabase auth session management for club owners |
+| `src/pages/Clubs.tsx` | Owner-facing list of clubs tied to the authenticated account |
+| `src/pages/ClubDetail.tsx` | Club management, event creation, invite codes, and QR surfaces |
+| `src/pages/ClubJoinPage.tsx` | Invite-code join flow that creates or reuses a member identity |
+| `src/pages/Dashboard.tsx` | Member-facing dashboard built from joined clubs and upcoming events |
+| `src/pages/EventCheckinPage.tsx` | Event attendance flow with invite-code lookup and attendance submission |
+| `src/utils/supabaseClient.ts` | Supabase client bootstrap from Vite environment variables |
+| `src/utils/dbMigrations.ts` | Startup migration helpers used to prepare member UUID support |
 
-This enables the “dashboard” and join/check-in experience to work with member-specific local state even when the user is not acting as a club owner.
+## How The Application Works
 
-### 3. Event check-in flow
+### Routing model
 
-`src/pages/EventCheckinPage.tsx` is one of the more involved screens in the repo. It handles:
+`src/App.tsx` defines one router with owner, member, and public routes:
 
-- invite-code based event lookup
-- club member name matching
-- optional location-aware check-in rules
-- QR-based event entry points
-- time-window restrictions for check-in
-- local member identity reuse through stored member UUID and club memberships
+| Route | Role |
+| --- | --- |
+| `/` | Entry router that decides where the user should land |
+| `/clubs` and `/clubs/:clubId` | Owner dashboard and per-club management |
+| `/join` and `/join/:clubId` | Member onboarding through invite codes |
+| `/dashboard` | Member-facing view of joined clubs and events |
+| `/attend` and `/checkin/:inviteCode` | Attendance flow for direct check-in |
+| `/events/:inviteCode/checkin-qr` | QR page that points people into the check-in route |
 
-This is more than a simple attendance form. The page combines event lookup, geolocation verification, member lookup/suggestions, and attendance submission in a single workflow.
+### Dual state model
 
-### 4. Database setup and migrations
+Attendify uses two forms of state together:
 
-`src/main.tsx` calls `setupDatabase()` on app startup.
+- Supabase auth sessions for club owners
+- browser `localStorage` for member identities and joined-club data
 
-That setup path is defined in `src/utils/dbMigrations.ts`, which attempts to create or invoke RPC-based migration helpers related to the `members` table and `member_uuid` handling. In other words, part of the application expects certain backend migration helpers to exist or be creatable when the app starts.
+`src/pages/Entry.tsx` reads those signals to route a user into the right experience. Member state is stored with keys such as `attendify_clubs`, `attendify_member_id`, and `owner_confirmed`, which lets a returning member go straight back to their dashboard or check-in flow.
+
+### Owner workflow
+
+Owners authenticate through `AuthContext` and manage their clubs through Supabase-backed pages. `src/pages/Clubs.tsx` resolves ownership through the `club_owners` table, then loads the linked club records. `src/pages/ClubDetail.tsx` expands that into operational tooling for:
+
+- viewing club details
+- managing members
+- creating and editing events
+- generating invite codes
+- opening QR-based entry pages for join and check-in flows
+
+### Member workflow
+
+The member path is intentionally lightweight. `src/pages/ClubJoinPage.tsx` accepts an invite code, looks up the club, creates or reuses a `member_uuid`, and stores the resulting membership locally. `src/pages/Dashboard.tsx` then combines those stored memberships with live event data so a member can see where they belong and what they can attend next.
+
+### Event check-in
+
+`src/pages/EventCheckinPage.tsx` is the attendance engine. It can start from a plain `/attend` route or from a direct invite-code URL. The screen coordinates:
+
+- event lookup by invite code
+- member identification and reuse of the stored member UUID
+- optional name matching when a member record already exists
+- event timing rules
+- location-aware attendance rules
+- submission of the final check-in record
+
+`src/pages/EventCheckinQR.tsx` generates QR entry points that turn an event invite code into a scannable handoff.
+
+### Database preparation
+
+`src/main.tsx` calls `setupDatabase()` before rendering the app. That startup path lives in `src/utils/dbMigrations.ts` and is responsible for ensuring the `members` table supports the `member_uuid` field used by the join and check-in flows.
+
+### PWA behavior
+
+`src/main.tsx` also registers `sw.js`, so the app ships with service-worker support in the frontend bootstrap.
+
+## Environment
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key used by the frontend client |
+
+The repository includes `database_schema.json` and `db_migration.sql` as supporting schema references for setting up the backend side of the application.
+
+## Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `npm start` | Start the Vite development server |
+| `npm run build` | Type-check and build the production bundle |
+| `npm run lint` | Run ESLint across the project |
+| `npm run preview` | Serve the production build locally |
 
 ## Stack
 
@@ -82,69 +149,8 @@ That setup path is defined in `src/utils/dbMigrations.ts`, which attempts to cre
 - React Router
 - Supabase
 - Tailwind CSS
-- Ionic React components
+- Ionic React
 - Framer Motion
-
-## Environment Variables
-
-Create a local `.env` from the template:
-
-```bash
-cp .env.example .env
-```
-
-Required values:
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-
-The application now reads these values from the environment instead of committing them directly in source. Without them, the app can render and compile, but live Supabase-backed auth and data operations will not work.
-
-## Run Locally
-
-Install dependencies:
-
-```bash
-npm ci
-```
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-Build for production:
-
-```bash
-npm run build
-```
-
-Run lint checks:
-
-```bash
-npm run lint
-```
-
-## Verified Commands
-
-The following commands were run successfully against this repository:
-
-```bash
-npm ci
-npm run dev
-npm run build
-npm run lint
-```
-
-`npm run lint` currently reports React Hooks / Fast Refresh warnings, but no errors.
-
-## Notes
-
-- The app uses both Supabase auth state and browser `localStorage` state to drive routing and role-specific behavior.
-- `tailwind.config.cjs` is intentionally CommonJS so the project builds correctly inside a `"type": "module"` package.
-- The current database setup path assumes supporting Supabase tables/RPC behavior exist for the runtime migration helpers in `src/utils/dbMigrations.ts`.
-- `src/main.tsx` also registers a service worker, so the app includes basic PWA behavior.
 
 ## License
 
