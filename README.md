@@ -8,7 +8,7 @@ Attendify is a web-based attendance platform for school clubs and organizations.
 
 ## What This Project Is
 
-From an interviewer or evaluator’s perspective, Attendify is a full-stack-style frontend application that demonstrates:
+Attendify is a frontend-heavy application that combines:
 
 - role-based attendance workflows
 - QR and invite-code driven club/event access
@@ -97,12 +97,11 @@ npm run lint
 
 `npm run lint` currently reports React Hooks / Fast Refresh warnings, but no errors.
 
-## Notes For Evaluation
+## Notes
 
 - The Tailwind config was renamed to `tailwind.config.cjs` so the project builds correctly in a `"type": "module"` package.
 - Supabase auth token cleanup is now derived from the configured project instead of a hardcoded project reference.
-- This public repo no longer includes agent-only markdown instruction files.
-- `SECURITY.md`, Dependabot, and CodeQL were added for baseline public-repo monitoring.
+- `SECURITY.md`, Dependabot, and CodeQL are included for ongoing repository monitoring.
 
 ## License
 
